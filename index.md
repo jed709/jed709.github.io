@@ -3,11 +3,31 @@ title: Home
 layout: home
 ---
 
----
+===============
 Introduction to Bayesian Parameter Estimation
+===============
+
+This tutorial uses the following _R_ packages:
+
+```R
+library(tidyverse)
+library(BayesFactor)
+library(brms)
+library(tidybayes)
+```
+---
+Why use parameter estimation?
 ---
 
-Hello...
+Bayes Factors are an intuitive and easily interpretable alternative to null hypothesis significance testing. However,
+these ratios do not necessarily provide a complete picture of our beliefs. To demonstrate this, let's work with an example
+using the `ToothGrowth` dataset.
+
+First, we assign the built-in dataset to a variable so we can modify it and recover the original if necesssary:
+
+```R
+d <- ToothGrowth 
+```
 
 ```R
 mt.2 <- brm(len~supp*dose,
