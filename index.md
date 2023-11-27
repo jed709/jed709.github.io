@@ -7,6 +7,7 @@ layout: home
 Introduction to Bayesian Parameter Estimation
 ---
 
+Hello...
 
 ```R
 mt.2 <- brm(len~supp*dose,
