@@ -21,4 +21,4 @@ mt.2 <- brm(len~supp*dose,
             file = 'toothmod_2')
 ```
 
-![ graph ](/jed709.github.io/assets/images/e4-faceted-c.png)
+![ graph ](assets/images/e4-faceted-c.png)
