@@ -52,7 +52,8 @@ Against denominator:
 Bayes factor type: BFoneSample, JZS
 ```
 
-According to our trusty rules of thumb, the evidence here is pretty solid. But where exactly do we derive this from? 
+According to our trusty rules of thumb, the evidence here is pretty solid: a difference between groups is favored over a null model by a factor of about 17. 
+But where exactly do we derive this from? 
 It might help to know what the posterior actually looks like. Let's repeat this test, but this time we'll generate a posterior
 distribution and save it as a variable. For the purposes of this example, we'll draw 10000 samples from the posterior. Because 
 sampling from the posterior is an iterative process, the samples drawn will vary slightly everytime this test is repeated, even if
@@ -178,7 +179,7 @@ the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% c
 of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. 
 We can say, then, that the effect of condition on sleep is _credible_. 
 
-Accordingly, we can use parameter estimation to accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
+Let's return to the Bayes Factor we computed earlier. The inferences we derive from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the bayes factor XX Accordingly, we can use parameter estimation to accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
 we can compute a distribution of beliefs about a model that incorporates uncertainty. But we can only do so much with the `BayesFactor` package.
 What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this package, the latter is possible,
 but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
