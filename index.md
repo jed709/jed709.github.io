@@ -4,7 +4,7 @@ layout: home
 ---
 
 ===============
-Introduction to Bayesian Parameter Estimation
+Practical Introduction to Bayesian Parameter Estimation
 ===============
 
 This tutorial uses the following _R_ packages:
@@ -131,12 +131,12 @@ That checks out, then: It seems that the most likely values for mu are around 1.
 
 But why leave it at that? One of the main advantages of estimating parameters is that your posterior quantifies your _distribution_
 of beliefs about the data. Accordingly, a single estimate for `mu` does not necessarily represent this distribution adequately. Looking
-at our figure, we can see our posterior includes values ranging from below -4 to above 2 - that's a lot of uncertainty about the value `mu`! 
+at our figure, we can see our posterior includes values ranging from below -4 to upwards of 1. That's a lot of uncertainty about the value of `mu`! 
 Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - 
-and therefore probability - is quite low. But what about values around -2, or around 0.5? The probability of these values is still fairly
-high. 
+and therefore probability - is quite low. But what about values around -2, or around -0.5? The probability of these values is still fairly
+high, and a single estimate derived from the posterior doesn't really capture this. 
 
-If we compute a single estimate for `mu`, we end up ignoring a lot of uncertainty and some very probable values. However, if we
+Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we
 use the full posterior, we might overemphasize extreme values that are very unlikely. So what is the solution? 
 
 One common approach is to compute a _Credible Interval_, which essentially trims the most extreme values off of
@@ -181,5 +181,74 @@ We can say, then, that the effect of condition on sleep is _credible_.
 Accordingly, we can use parameter estimation to accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
 we can compute a distribution of beliefs about a model that incorporates uncertainty. But we can only do so much with the `BayesFactor` package.
 What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this package, the latter is possible,
-but options for specifying priors are limited. To address the problems, we must turn to the `brms` package. 
+but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
 
+---
+Estimating Parameters Using _brms_
+---
+
+Although we will work with a more complex design in this section, the basics we learned about working with the posterior still apply here. For our
+purposes, let's work with the `ToothGrowth` dataset.
+
+```R
+nd <- ToothGrowth
+```
+
+This dataset reflects an experiment wherein the dependent measure the length of odontoblasts (`len`) in guinea pigs. This doesn't feel intuitive, so we'll just pretend this is tooth length. The guinea pigs were administered vitamin C using one of two methods, either ascorbic acid (`VC`) or orange juice (`OJ`). Each guinea pig received vitamin C at one of three possible levels of `dose`, `0.5`, `1.0`, or `2.0`. Thus, the design of the experiment is 2 x 3, with both fixed effects manipulated between-subject; this is perfect for our purposes, because multilevel modelling is beyond the scope of this tutorial. 
+
+So, how would we model this experiment? We can think about it in a pretty similar manner to how we would think about an ANOVA: We have two fixed effects we are interested in, and we are also probably interested in the interaction between them. `brms` uses the same formula syntax as the `lme4` package and most _R_ functions that can be used to fit linear models. So, we can translate our design into a linear formula, like so:
+
+```R
+len ~ supp * dose
+```
+
+Passed to `brms`, this syntax will model the effect of each predictor (and their interaction) on `len`. Before we do that, however, we should prepare our dataset:
+We want dose to be a categorical predictor, so we should convert it into a factor like so:
+
+```R
+nd = nd %>%
+  mutate(dose = factor(dose))
+```
+
+_Now_ we can fit a linear model of the data using `brms`. Here's how the code looks:
+
+```R
+m.1 <- brm(len~supp*dose,
+           data = nd,
+           chains = 4,
+           cores = 4)
+```
+
+Simple as that! This might take a minute to compile and run.
+
+Now let's call the summary function on the output:
+
+```R
+ Family: gaussian 
+  Links: mu = identity; sigma = identity 
+Formula: len ~ supp * dose 
+   Data: nd (Number of observations: 60) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Population-Level Effects: 
+             Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept       13.23      1.16    10.98    15.52 1.00     2102     2638
+suppVC          -5.22      1.63    -8.38    -1.96 1.00     1972     2676
+dose1            9.49      1.66     6.21    12.72 1.00     1989     2189
+dose2           12.83      1.64     9.57    16.09 1.00     2400     2817
+suppVC:dose1    -0.71      2.36    -5.31     4.11 1.00     1919     2404
+suppVC:dose2     5.30      2.31     0.83     9.79 1.00     2185     2825
+
+Family Specific Parameters: 
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sigma     3.71      0.37     3.06     4.49 1.00     2993     2784
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+```
+
+There's a lot of output there, but it is very similar to the output you would get from a typical linear model. Let's start with the population-level effects. Because our predictors are categorical,
+the model intercept represents tooth length at our reference level, which is `supp = OJ` and `dose = 0.5`. The model slopes represent changes in tooth length
+for other levels of our predictors _relative to our reference level_. So, a coefficient of 9.49 for `dose1` means that at levels of `dose = 1` and `supp = VC`, tooth length increased by an average of 9.49 relative to the reference level. See? Simple enough. We also get 95% Credible Intervals for each coefficient. Given that none of these intervals contain 0, it appears that our intercept and all of our slopes are credible. Finally, the model also gives us R-hat statistics and effective sample sizes for each estimate. These are indices of model convergence, which we will not worry about in this tutorial. 
