@@ -94,13 +94,50 @@ Thinning interval = 1
 ```
 
 There's a lot going on there. For the purposes of this tutorial, we're going to ignore most of it. The parameter
-of interest to is `mu`, which reflects the unstandardized difference in `extra` between conditions.  This reflects posterior samples - 10000 of them, 
-to be precise - for the unstandardized difference in `extra` between conditions. That might sound somewhat absract - what does it _mean_?. To make it concrete, let's visualize the distribution of our posterior using `ggplot2`:
+of interest to us is `mu`. This parameter reflects posterior samples - 10000 of them, to be precise - for the unstandardized difference in `extra` between conditions. That might sound somewhat absract - what does it _mean_?. To make it concrete, let's visualize the distribution of our posterior using `ggplot2`:
 
 ```R
-
+sleep.post %>%
+  as.data.frame() %>% # this makes the data easier to work with using tidyverse
+  ggplot(aes(x = mu)) +
+  geom_density()
 ```
 
+You'll get a figure that looks something like this:
 
+![ graph ](assets/images/sleep-dens.png)
 
-![ graph ](assets/images/e4-faceted-c.png)
+Pretty neat, but what does this distribution tell us? 
+
+Essentially, it tells us how our beliefs about `mu` are distributed: The higher the density of a given value, the higher the
+posterior probability of that value. As we can see, it appears that our posterior density is highest for values of around 1.5 or so,
+meaning values in this region are the most probable. This should be reflected if we calculate descriptive statistics for `mu`:
+
+```R
+mean(sleep.post[,'mu'])
+
+median(sleep.post[,'mu'])
+```
+
+Output:
+
+```R
+[1] -1.408298
+
+[1] -1.415092
+```
+
+That checks out, then: It seems that the most likely values for mu are around 1.4. 
+
+But why leave it at that? One of the main advantages of estimating parameters is that your posterior quantifies your _distribution_
+of beliefs about the data. Accordingly, a single estimate for `mu` does not necessarily represent this distribution adequately. Looking
+at our figure, we can see our posterior includes values ranging from below -4 to above 2 - that's a lot of uncertainty about the value `mu`! 
+Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - 
+and therefore probability - is quite low. But what about values around -2, or around 0.5? The probability of these values is still fairly
+high. 
+
+If we compute a single estimate for `mu`, we end up ignoring a lot of uncertainty and some very probable values. However, if we
+use the full posterior, we might overemphasize extreme values that are very unlikely. So what is the solution? 
+
+One common approach is to compute a _Credible Interval_ of posterior estimates, which essentially trims the most extreme values off of
+the posterior distribution. 
