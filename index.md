@@ -16,7 +16,7 @@ library(brms)
 library(tidybayes)
 ```
 ---
-Why use parameter estimation?
+Part I: Why use parameter estimation?
 ---
 
 Bayes Factors are an intuitive and easily interpretable alternative to null hypothesis significance testing. However,
@@ -175,6 +175,11 @@ Let's visualize the HDPI, with the 95% confidence region shaded in blue:
 As we can see, the HDPI cuts off all the extreme values that don't fall within our arbitrary confidence region. Thus, this interval
 provides a good representation of the values in our posterior that we deem credible. Now that we have a Credible Interval, making inferences about
 the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms
-of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. In other words,
-we are very confident that condition 2 gained more sleep. 
+of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. 
+We can say, then, that the effect of condition on sleep is _credible_. 
+
+Accordingly, we can use parameter estimation to accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
+we can compute a distribution of beliefs about a model that incorporates uncertainty. But we can only do so much with the `BayesFactor` package.
+What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this package, the latter is possible,
+but options for specifying priors are limited. To address the problems, we must turn to the `brms` package. 
 
