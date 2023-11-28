@@ -139,5 +139,42 @@ high.
 If we compute a single estimate for `mu`, we end up ignoring a lot of uncertainty and some very probable values. However, if we
 use the full posterior, we might overemphasize extreme values that are very unlikely. So what is the solution? 
 
-One common approach is to compute a _Credible Interval_ of posterior estimates, which essentially trims the most extreme values off of
-the posterior distribution. 
+One common approach is to compute a _Credible Interval_, which essentially trims the most extreme values off of
+the posterior distribution. This will provide a more complete representation of the posterior than a single estimate,
+but it also won't emphasize extremely improbable values that exist on either end of the range. It will also allow us to make
+inferences from the posterior, as I will explain below.
+
+There are several possible approaches we could take to compute such an interval, but I'll focus on the Highest Posterior Density Interval (HPDI), which contains
+the highest-probability values for a given confidence level. The confidence level is entirely arbitrary. Although 95% is a common cutoff, there
+is no reason this cutoff must be used. We could use 99%, 50%, 89% (as McElreath likes to do), or any other value that we believe is justified. To keep things
+simple and straightforward, I'll stick with 95%; however, keep in mind that you don't have to.
+
+With that in mind, let's go back into _R_ and do something concrete. Now that we know what the HDPI is, let's compute this interval for `mu` 
+using the `tidybayes` package:
+
+```R
+sleep.post %>%
+  as.data.frame() %>%
+  median_hdi(mu)
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+     mu .lower .upper .width .point .interval
+  <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1 -1.42  -2.29 -0.501   0.95 median hdi 
+```
+
+Our estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50.
+Let's visualize the HDPI, with the 95% confidence region shaded in blue:
+
+![hdpi](https://github.com/jed709/jed709.github.io/assets/87210399/b849d620-f71b-4407-b229-cec9356e0c65)
+
+As we can see, the HDPI cuts off all the extreme values that don't fall within our arbitrary confidence region. Thus, this interval
+provides a good representation of the values in our posterior that we deem credible. Now that we have a Credible Interval, making inferences about
+the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms
+of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. In other words,
+we are very confident that condition 2 gained more sleep. 
+
