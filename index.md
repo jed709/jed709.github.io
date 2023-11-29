@@ -15,13 +15,18 @@ library(BayesFactor)
 library(brms)
 library(tidybayes)
 ```
+
+For this tutorial, I will assume that readers have some baseline knowledge of Bayesian reasoning and statistics. This guide is intended to be practical and to show you that you, too, can estimate parameters using Bayesian methods. I will briefly cover theoretical concepts where necessary, but my approach throughout this guide will be largely hands-on. 
+
+With that out of the way, let's get started. 
+
 ---
 Part I: Why use parameter estimation?
 ---
 
-Bayes Factors are an intuitive and easily interpretable alternative to null hypothesis significance testing. However,
-these ratios do not necessarily provide a complete picture of our beliefs. To demonstrate this, let's work through an example
-using the built-in `sleep` dataset.
+Assuming you are at least slightly familiar with Bayesian statistics, you are probably familiar with Bayes Factors. Bayes Factors are an intuitive and easily interpretable alternative to approaches that our statistics courses have taught us to distrust, like null hypothesis significance testing. So why would we want to use paramater estimation? The output of regression models is messy and more difficult to interpet. Can't we just stick with model comparison using Bayes Factors? The issue here is that Bayes Factors do not necessarily provide a complete, nuanced picture of our beliefs. Like everything else in life, statistics is not black and white. It is difficult - and probably not best practice - to condense our beliefs about something down to a single number. This is where Bayesian parameter estimation comes in: Using this approach, we can map out _distributions_ of beliefs that quantify our uncertainty about the data.
+
+To demonstrate this, let's start with using Bayes Factors. We'll work through an example using the built-in `sleep` dataset.
 
 First, we assign the built-in dataset to a variable so we can modify it and recover the original if necesssary:
 
@@ -52,9 +57,9 @@ Against denominator:
 Bayes factor type: BFoneSample, JZS
 ```
 
-According to our trusty rules of thumb, the evidence here is pretty solid: a difference between groups is favored over a null model by a factor of about 17. 
-But where exactly do we derive this from? 
-It might help to know what the posterior actually looks like. Let's repeat this test, but this time we'll generate a posterior
+According to our trusty rules of thumb, the evidence here is pretty solid: A difference between groups is favored over a null model by a factor of about 17. But where exactly do we derive this from? Does this Bayes Factor provide a full picture of our belief in the effect? Probably not.
+
+To demonstrate this, it might help to know what our posterior for this test would actually look like. Let's repeat this test, but this time we'll generate a posterior
 distribution and save it as a variable. For the purposes of this example, we'll draw 10000 samples from the posterior. Because 
 sampling from the posterior is an iterative process, the samples drawn will vary slightly everytime this test is repeated, even if
 we are working with the exact same dataset. To ensure we all get the exact same values, I include a call to `set.seed()` before
@@ -253,3 +258,5 @@ scale reduction factor on split chains (at convergence, Rhat = 1).
 There's a lot of output there, but it is very similar to the output you would get from a typical linear model. Let's start with the population-level effects. Because our predictors are categorical,
 the model intercept represents tooth length at our reference level, which is `supp = OJ` and `dose = 0.5`. The model slopes represent changes in tooth length
 for other levels of our predictors _relative to our reference level_. So, a coefficient of 9.49 for `dose1` means that at levels of `dose = 1` and `supp = VC`, tooth length increased by an average of 9.49 relative to the reference level. See? Simple enough. We also get 95% Credible Intervals for each coefficient. Given that none of these intervals contain 0, it appears that our intercept and all of our slopes are credible. Finally, the model also gives us R-hat statistics and effective sample sizes for each estimate. These are indices of model convergence, which we will not worry about in this tutorial. 
+
+What we will worry about, however, is the fact that we fit this model without specifying any priors. 
