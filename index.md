@@ -16,7 +16,7 @@ library(brms)
 library(tidybayes)
 ```
 
-For this tutorial, I will assume that readers have some baseline knowledge of Bayesian reasoning and statistics. This guide is intended to be practical and to show you that you, too, can estimate parameters using Bayesian methods. I will briefly cover theoretical concepts where necessary, but my approach throughout this guide will be largely hands-on. 
+For this tutorial, I will assume that readers have some baseline knowledge of (1) Bayesian reasoning and statistics and (2) linear regression. This guide is intended to be practical and to show you that you - yes, you - can estimate parameters using Bayesian methods. I will briefly cover theoretical concepts where necessary, but my approach throughout this guide will be largely hands-on. 
 
 With that out of the way, let's get started. 
 
@@ -182,12 +182,13 @@ As we can see, the HDPI cuts off all the extreme values that don't fall within o
 provides a good representation of the values in our posterior that we deem credible. Now that we have a Credible Interval, making inferences about
 the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms
 of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. 
-We can say, then, that the effect of condition on sleep is _credible_. 
+Because our Credible Interval does not contain zero, we can say that the effect of condition on sleep is _credible_. 
 
-Let's return to the Bayes Factor we computed earlier. The inferences we derive from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the bayes factor XX Accordingly, we can use parameter estimation to accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
-we can compute a distribution of beliefs about a model that incorporates uncertainty. But we can only do so much with the `BayesFactor` package.
-What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this package, the latter is possible,
-but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
+Let's return to the Bayes Factor we computed earlier. The inferences we derive from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the Bayes Factor did not provide a complete picture of the effect. With parameter estimation, then, we can accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
+we can compute a distribution of beliefs about a model that incorporates uncertainty. 
+
+But we can only do so much with the `BayesFactor` package.
+What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this `BayesFactor`, the latter is possible, but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
 
 ---
 Estimating Parameters Using _brms_
@@ -202,7 +203,7 @@ nd <- ToothGrowth
 
 This dataset reflects an experiment wherein the dependent measure the length of odontoblasts (`len`) in guinea pigs. This doesn't feel intuitive, so we'll just pretend this is tooth length. The guinea pigs were administered vitamin C using one of two methods, either ascorbic acid (`VC`) or orange juice (`OJ`). Each guinea pig received vitamin C at one of three possible levels of `dose`, `0.5`, `1.0`, or `2.0`. Thus, the design of the experiment is 2 x 3, with both fixed effects manipulated between-subject; this is perfect for our purposes, because multilevel modelling is beyond the scope of this tutorial. 
 
-So, how would we model this experiment? We can think about it in a pretty similar manner to how we would think about an ANOVA: We have two fixed effects we are interested in, and we are also probably interested in the interaction between them. `brms` uses the same formula syntax as the `lme4` package and most _R_ functions that can be used to fit linear models. So, we can translate our design into a linear formula, like so:
+So, how would we model this experiment? We can think about it in a pretty similar manner to how we would think about an ANOVA: We have two fixed effects we are interested in, and we are also probably interested in the interaction between them. `brms` uses the same formula syntax as the `lme4` package and most _R_ functions that can be used to fit linear models (e.g., `lm()`). So, it is fairly easy to translate our design into a linear formula, like so:
 
 ```R
 len ~ supp * dose
@@ -259,4 +260,77 @@ There's a lot of output there, but it is very similar to the output you would ge
 the model intercept represents tooth length at our reference level, which is `supp = OJ` and `dose = 0.5`. The model slopes represent changes in tooth length
 for other levels of our predictors _relative to our reference level_. So, a coefficient of 9.49 for `dose1` means that at levels of `dose = 1` and `supp = VC`, tooth length increased by an average of 9.49 relative to the reference level. See? Simple enough. We also get 95% Credible Intervals for each coefficient. Given that none of these intervals contain 0, it appears that our intercept and all of our slopes are credible. Finally, the model also gives us R-hat statistics and effective sample sizes for each estimate. These are indices of model convergence, which we will not worry about in this tutorial. 
 
-What we will worry about, however, is the fact that we fit this model without specifying any priors. 
+We can also directly access the full posterior for any model term. This can be accomplished using the `as_draws_df` function from the `brms` package. Let's try that and see what we get:
+
+```R
+m.1 %>%
+  as_draws_df() %>%
+  head()
+```
+
+Output:
+
+```R
+# A draws_df: 6 iterations, 1 chains, and 9 variables
+  b_Intercept b_suppVC b_dose1 b_dose2 b_suppVC:dose1 b_suppVC:dose2 sigma lprior
+1          12     -4.6    10.9      13           0.15            5.3   3.6   -5.8
+2          14     -6.8     8.0      13           1.57            4.7   3.7   -5.8
+3          15     -8.3     8.1      10           2.23            8.7   3.6   -5.8
+4          14     -6.1     6.7      10           1.92            7.8   4.0   -5.8
+5          15     -7.0     8.0      12           2.58            6.8   3.6   -5.8
+6          15     -6.6     6.2      12           3.10            6.2   3.1   -5.8
+# ... with 1 more variables
+# ... hidden reserved variables {'.chain', '.iteration', '.draw'}
+```
+
+All of our model coefficients here. The values in this dataframe represent draws or samples from the posterior for each coefficient. This is pretty similar to what we did using `ttestBF`, except we have done it for a much more complex model. 
+
+To get comfortable with this concept, let's look at the posterior for the `supp = OJ` and `dose = 0.5` condition (i.e., our intercept). `brms` uses weird naming conventions for model coefficients. If you're not familiar with these conventions, the `get_variables` function from the `tidybayes` package is very handy:
+
+```R
+get_variables(m.1)
+```
+
+Output:
+
+```R
+ [1] "b_Intercept"    "b_suppVC"       "b_dose1"        "b_dose2"        "b_suppVC:dose1" "b_suppVC:dose2"
+ [7] "sigma"          "lprior"         "lp__"           "accept_stat__"  "stepsize__"     "treedepth__"   
+[13] "n_leapfrog__"   "divergent__"    "energy__"  
+```
+
+To access the model intercept, then, we will need to call the `b_Intercept` term. With that out of the way, let's take a glimpse at the posterior distribution for the intercept:
+
+What we will worry about, however, is the fact that we fit this model without specifying any priors. When we don't specify priors, `brms` uses default priors. What does this mean, exactly? To understand, we need to take a look at the priors the model used:
+
+```R
+prior_summary(m.1)
+```
+
+Output:
+
+```R
+                 prior     class         coef group resp dpar nlpar lb ub       source
+                (flat)         b                                               default
+                (flat)         b        dose1                             (vectorized)
+                (flat)         b        dose2                             (vectorized)
+                (flat)         b       suppVC                             (vectorized)
+                (flat)         b suppVC:dose1                             (vectorized)
+                (flat)         b suppVC:dose2                             (vectorized)
+ student_t(3, 19.2, 9) Intercept                                               default
+    student_t(3, 0, 9)     sigma                                     0         default
+```
+
+We can see that by default, `brms` puts "flat" priors on our slopes. These are the priors we will focus on. What would "flat" priors look like? Something like this:
+
+![unif](https://github.com/jed709/jed709.github.io/assets/87210399/eb1f5f3e-4d2c-47dd-be99-be6674d95f3a)
+
+I've added tails so the "curve" is visible. The values on each axis aren't important. What is important is that all values within the distribution (within the range of -5 to 5, for the purposes of my visualization) have equal probability. So, this is the prior knowledge that `brms` puts on our slopes if we don't specify anything. This is about as uninformative as a prior can get: We are telling the model that any given value of our slopes is just as likely as any other given value. This is also nearly equivalent to the approach taken by Frequentist methods.
+
+It is good not to use priors that are _too_ informative; this could tip the scale one way or the other, which we want to avoid. In practice, however, there is no reason that priors need to be _so_ uninformative as to afford equal probablity to all possible values. What reasonable constraints might we apply to the data?
+
+In this example, our dependent variable is tooth length. The default prior used by `brms` will consider values below zero to be just as likely as values above zero. This makes no sense. A guinea pig could have a tooth length of zero, hypothetically, but lower values are not possible: Guinea pigs cannot have negative teeth. Accordingly, it would be very reasonable of us to tell the model not to consider values below zero. 
+
+Similarly, the fact that we are working with guinea pigs tells us that we can place some reasonable constraints on how long their teeth can be. Guinea pigs are quite small, so their teeth are not going to be comparable in size to the tusks of an elephant. Using flat priors, we are essentially saying that tusk-sized teeth are just as likely as something more reasonable. 
+
+With that in mind, let's translate our prior knowledge into modelling syntax to make a better model. There are several improvements we can make. The first thing we can do is specify the model _without_ the intercept. Because we are using categorical predictors, removing the model intercept will allow us to compute slopes that estimate the mean in each condition. This is much more intuitive than 
