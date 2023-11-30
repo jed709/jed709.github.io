@@ -191,7 +191,7 @@ But we can only do so much with the `BayesFactor` package.
 What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this `BayesFactor`, the latter is possible, but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
 
 ---
-Estimating Parameters Using _brms_
+Part II: The Basics of Estimating Parameters Using _brms_
 ---
 
 Although we will work with a more complex design in this section, the basics we learned about working with the posterior still apply here. For our
@@ -283,9 +283,7 @@ Output:
 # ... hidden reserved variables {'.chain', '.iteration', '.draw'}
 ```
 
-All of our model coefficients here. The values in this dataframe represent draws or samples from the posterior for each coefficient. This is pretty similar to what we did using `ttestBF`, except we have done it for a much more complex model. 
-
-To get comfortable with this concept, let's look at the posterior for the `supp = OJ` and `dose = 0.5` condition (i.e., our intercept). `brms` uses weird naming conventions for model coefficients. If you're not familiar with these conventions, the `get_variables` function from the `tidybayes` package is very handy:
+All of our model coefficients here. The values in this dataframe represent draws or samples from the posterior for each coefficient. This is pretty similar to what we did using `ttestBF`, except we have done it for a much more complex model. As an aside, we can see in our output from `as_draws_df` that `brms` uses weird naming conventions for model coefficients. If you're not familiar with these conventions, and if you don't want to generate a dataframe every time you need to know what the name of a model term is, the `get_variables` function from the `tidybayes` package is very handy:
 
 ```R
 get_variables(m.1)
@@ -299,7 +297,100 @@ Output:
 [13] "n_leapfrog__"   "divergent__"    "energy__"  
 ```
 
-To access the model intercept, then, we will need to call the `b_Intercept` term. With that out of the way, let's take a glimpse at the posterior distribution for the intercept:
+Easy!
+
+Now, to get comfortable working with posteriors from complex models, let's look at the posterior for the `supp = OJ` and `dose = 0.5` condition (i.e., our intercept). Remember, to access the posterior for this condition, we will need to use the model intercept, i.e., the `b_Intercept` term. Let's glimpse at the posterior distribution for the intercept:
+
+```R
+m.1 %>%
+  as_draws_df() %>%
+  ggplot(aes(x = b_Intercept)) +
+  geom_density() +
+  theme_classic()
+```
+
+Output:
+
+![intercept-post](https://github.com/jed709/jed709.github.io/assets/87210399/6e6769f0-1f50-481e-bbf0-95caa70eb894)
+
+This is a similar exercise to what we did with our posterior from the sleep dataset. As we can see, the most probable values are around 13 or so, which matches up well with the model output. We can also use `as_draws_df` in conjunction with `median_hdi` from `tidybayes` to calculate a credible interval for any posterior distribution derived from our model:
+
+```R
+m.1 %>%
+  as_draws_df() %>%
+  median_hdi(b_Intercept)
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+  b_Intercept .lower .upper .width .point .interval
+        <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1        13.2   11.1   15.6   0.95 median hdi 
+```
+
+This might not seem that exciting, because our `brms` output already gave us a Credible Interval for this term, and it is quite similar to the HDI. However, something more exciting is that we can use this general method to conduct any number of arbitrary comparisons and evaluate whether or not they are meaningful. For example, what if we wanted to check whether tooth length in the `VC` condition was higher for `dose = 2` relative to `dose = 1`? This is very easy to do with `as_draws_df`. Here's a demonstration: 
+
+```R
+m.1 %>%
+  as_draws_df() %>%
+  
+  # Remember, the model slopes reflect changes relative to the reference level.
+  # To get the mean for a given condition, we need to add the slopes to the intercept
+  
+  mutate(contrast = (b_Intercept + b_dose2) - (b_Intercept + b_dose1)) %>%
+  
+  # Then we can compute the desired contrast between conditions and produce a
+  # credible interval
+  
+  select(contrast) %>%
+  median_hdi()
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+  contrast .lower .upper .width .point .interval
+     <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1     3.34  0.135   6.56   0.95 median hdi  
+```
+
+As we can see, our median posterior estimate is 3.34, with the HDI ranging from 0.14 to 6.56. In other words, tooth length was credibly higher for the `supp = OJ` and `dose = 2` condition relative to the `dose = 1` condition for the same method of delivery. This is what I find most intutitive about working with Bayesian models. When it comes to contrasts, the world is your oyster. You can generate a contrast for any relationship you are interested in - no need for special statistical tests to evaluate pairwise comparisons. 
+
+The contrasts and condition means you compute can also be translated into informative visualizations. For example, what if we were interested in depicting the contrast between high and medium doses (`dose2` - `dose1`) and the contrast between high and low doses (`dose2` - `dose0.5`). We can make a pretty cool plot out of this using the `stat_halfeye` function from `tidybayes`. This function is imported from the `ggdist` package, which you'll want to install if you'll be doing a lot of this sort of visualization. For our purposes, however, the function `tidybayes` has will suffice. Here's how we could plot these two contrasts together:
+
+```R
+m.1 %>%
+  as_draws_df() %>%
+  mutate(HighMid = (b_Intercept + b_dose2) - (b_Intercept + b_dose1),
+         
+         # dose0.5 is our intercept, so the difference between dose2 and
+         # dose0.5 is just equal to the slope of dose2
+         
+         HighLow = b_dose2) %>% 
+  
+  pivot_longer(cols = c(HighMid, HighLow), 
+               names_to = 'contrast', 
+               values_to = 'post') %>%
+  ggplot(aes(x = post, 
+             y = contrast)) +
+  stat_halfeye() + 
+  theme_classic()
+```
+
+Output:
+
+![con_plot_1](https://github.com/jed709/jed709.github.io/assets/87210399/083e0249-17b7-4801-8c97-020f4822ce07)
+
+Cool plot, right? It contains a lot of information. The point is your median posterior estimate. The thick line surrounding the point is the 50% HDI, and the thin line is the 95% HDI. On top of the interval, we get a visualization of the entire posterior distribution of the estimate. These contrasts might not be the most interesting to visualize, but it's a simple proof-of-concept that you can build off. 
+
+Now that we understand the basics of fitting models with `brms` and working with the posteriors they generate, let's go through a more complex - but more practical - example, using the same dataset.
+
+---
+Part III: A Practical Example
+---
 
 What we will worry about, however, is the fact that we fit this model without specifying any priors. When we don't specify priors, `brms` uses default priors. What does this mean, exactly? To understand, we need to take a look at the priors the model used:
 
