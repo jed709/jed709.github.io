@@ -392,7 +392,7 @@ Now that we understand the basics of fitting models with `brms` and working with
 Part III: A Practical Example
 ---
 
-What we will worry about, however, is the fact that we fit this model without specifying any priors. When we don't specify priors, `brms` uses default priors. What does this mean, exactly? To understand, we need to take a look at the priors the model used:
+You might have noticed that we fit our model of the `ToothGrowth` dataset without specifying any priors. This is not great. When we don't specify priors, `brms` uses default priors. What does this mean, exactly? To understand, we need to take a look at the priors the model used, which we can access using `prior_summary`:
 
 ```R
 prior_summary(m.1)
@@ -412,7 +412,7 @@ Output:
     student_t(3, 0, 9)     sigma                                     0         default
 ```
 
-We can see that by default, `brms` puts "flat" priors on our slopes. These are the priors we will focus on. What would "flat" priors look like? Something like this:
+We can see that by default, `brms` puts "flat" priors on our slopes. These are the priors we will focus on, for now. But what would "flat" priors look like? Something like this:
 
 ![unif](https://github.com/jed709/jed709.github.io/assets/87210399/eb1f5f3e-4d2c-47dd-be99-be6674d95f3a)
 
@@ -420,8 +420,225 @@ I've added tails so the "curve" is visible. The values on each axis aren't impor
 
 It is good not to use priors that are _too_ informative; this could tip the scale one way or the other, which we want to avoid. In practice, however, there is no reason that priors need to be _so_ uninformative as to afford equal probablity to all possible values. What reasonable constraints might we apply to the data?
 
-In this example, our dependent variable is tooth length. The default prior used by `brms` will consider values below zero to be just as likely as values above zero. This makes no sense. A guinea pig could have a tooth length of zero, hypothetically, but lower values are not possible: Guinea pigs cannot have negative teeth. Accordingly, it would be very reasonable of us to tell the model not to consider values below zero. 
+In this example, our dependent variable is tooth length. The default prior used by `brms` will consider values below zero to be just as likely as values above zero. This makes no sense. A guinea pig could have a tooth length of zero, hypothetically, but lower values are not possible: Guinea pigs cannot have negative teeth. Accordingly, it would be very reasonable of us to tell the model not to consider values below zero. Similarly, the fact that we are working with guinea pigs tells us that we can place some reasonable constraints on how long their teeth can be. Guinea pigs are quite small, so their teeth are not going to be comparable in size to the tusks of an elephant. Using flat priors, we are essentially saying that tusk-sized teeth are just as likely as something more reasonable. 
 
-Similarly, the fact that we are working with guinea pigs tells us that we can place some reasonable constraints on how long their teeth can be. Guinea pigs are quite small, so their teeth are not going to be comparable in size to the tusks of an elephant. Using flat priors, we are essentially saying that tusk-sized teeth are just as likely as something more reasonable. 
+With that in mind, let's fit a better model that incorporates some reasonable prior knowledge. Before we do that, however, let's modify the parameterization of the model so we can more easily specify priors for each condition. Because we are using categorical predictors, we can remove the model intercept and compute slopes that estimate the mean in each condition. Using this approach, our reference level will still be modelled, and the output will be much more intutive to interpret. Rather than thinking about the slopes as differences between conditions, we will instead simply get an estimate for each cell. This will also make contrasts easier to compute. We can remove the model intercept using the same syntax we would use in `lme4`. Here's the formula we'll use:
 
-With that in mind, let's translate our prior knowledge into modelling syntax to make a better model. There are several improvements we can make. The first thing we can do is specify the model _without_ the intercept. Because we are using categorical predictors, removing the model intercept will allow us to compute slopes that estimate the mean in each condition. This is much more intuitive than 
+```R
+len~supp:dose-1
+```
+
+Now that we have our formula, we can look at the parameterization of the model and decide how we will specify our priors. We can access this easily without fitting a model, using the very handy `get_prior` function from `brms`. If we were fitting a different type of model, we'd need to give it some additional information. But for our purposes, all we need is the formula and the dataframe we're using:
+
+```R
+get_prior(formula = len~supp:dose-1,
+          data = nd)
+```
+
+Output:
+
+```R
+              prior class           coef group resp dpar nlpar lb ub       source
+             (flat)     b                                                 default
+             (flat)     b suppOJ:dose0.5                             (vectorized)
+             (flat)     b   suppOJ:dose1                             (vectorized)
+             (flat)     b   suppOJ:dose2                             (vectorized)
+             (flat)     b suppVC:dose0.5                             (vectorized)
+             (flat)     b   suppVC:dose1                             (vectorized)
+             (flat)     b   suppVC:dose2                             (vectorized)
+ student_t(3, 0, 9) sigma                                       0         default
+```
+
+Now we can see all the terms in our model. As we can see, we'll compute a slope corresponding to tooth length for every possible combination of our fixed effects. Pretty intuitive, right? This also means we don't have to specify priors on our slopes with respect to the _difference_ we expect relative to the reference level. Instead, we can specify priors that reflect our belief about what tooth length should be in each condition. 
+
+Now, with this parameterization, we could give the model a specific prior for each condition. However, we do want to avoid tipping the scale, so we'll keep our priors pretty general and mostly uninformative. There are two pieces of prior knowledge we want to incorporate here:
+
+1. Tooth length cannot be negative
+2. Guinea pig teeth won't be particularly long
+
+To do this, we'll have to come up with a belief about guinea pig tooth length. I'm no expert, but you can pretend I researched this and came up with the principled hypothesis that tooth length in any condition should fall between 0 and 16, with a mean of 8. In practice, your priors should be calibrated to principled beliefs. We're also going to set a hard lower bound on tooth length in all conditions so the model doesn't afford probability to values below zero. In `brms`-speak, all of that would look like this:
+
+```R
+prior(normal(8, 4), class = 'b', lb = 0)
+```
+
+This sets a normal prior - with a mean of 8 and a standard deviation of 4 - on all of our model slopes. If you wanted to set priors on individual model coefficients, you could do it like this:
+
+```R
+prior(normal(8, 4), coef = 'suppOJ:dose2')
+```
+
+But you would only want to do that if you had good reason to do so. We won't do that today.
+
+Another thing we won't get into is addressing the priors for sigma. By default, `brms` uses a half-Cauchy prior, which is a Cauchy distribution truncated at zero. Sigma cannot be negative, so this is good. Half-Cauchy priors are uninformative and are recommended for sigma (e.g., Gelman, 2006). We don't have any principled reason to mess with this prior in this tutorial, so we'll leave it as is.
+
+Now that we've gone over all of that, let's fit a new model, minus the intercept and inclusive of our principled priors on the model slopes. Here's how we could do that:
+
+```R
+m.2 <- brm(len~supp:dose-1,
+           prior = prior(normal(8, 4), class = 'b', lb = 0),
+           data = nd,
+           chains = 4,
+           cores = 4)
+```
+
+And our output:
+
+```R
+ Family: gaussian 
+  Links: mu = identity; sigma = identity 
+Formula: len ~ supp:dose - 1 
+   Data: nd (Number of observations: 60) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Population-Level Effects: 
+               Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+suppOJ:dose0.5    12.75      1.21    10.37    15.12 1.00     5051     2749
+suppVC:dose0.5     7.95      1.20     5.57    10.28 1.00     5438     2539
+suppOJ:dose1      21.41      1.23    18.86    23.72 1.00     5609     2585
+suppVC:dose1      16.00      1.18    13.57    18.25 1.00     5436     2978
+suppOJ:dose2      24.51      1.21    22.07    26.78 1.00     4986     3050
+suppVC:dose2      24.57      1.21    22.07    26.80 1.00     4728     2760
+
+Family Specific Parameters: 
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sigma     3.88      0.42     3.16     4.78 1.00     3734     3284
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+```
+
+Nice - much easier to interpret than our previous model! You'll also notice that tooth length in our reference level is a bit lower than before. This is because our priors pulled it a little bit closer to zero. Once again, we get a 95% Credible Interval for each estimate, but in this case, these are less meaningful. All they tell us is that tooth length in each condition is credibly different from zero, which we would hope it should be (unless we had toothless guinea pigs). 
+
+But the real strengths of this model arise when we want to compute contrasts. The way we have paramterized the model makes this incredibly easy. For example, let's see if tooth length was greater in the `suppOJ:dose1` condition relative to the `suppVC:dose1` condition. Note that I wrap the column names in backticks. _R_ will interpret the `:` as an operator if you don't do this, so this is useful to know if you'll be working with models with crossed effects. Anyway, here's the code:
+
+```R
+m.2 %>%
+  as_draws_df() %>%
+  mutate(contrast = `b_suppOJ:dose1` - `b_suppVC:dose1`) %>%
+  median_hdi(contrast)
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+  contrast .lower .upper .width .point .interval
+     <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1     5.40   1.96   8.53   0.95 median hdi 
+```
+
+Indeed, it's credibly higher for the former. Let's try something else - what if we wanted to know if average tooth length was higher for the `OJ` group overall relative to the `VC` group? We could check by averaging the lengths for each group and then subtracting one from the other, like this:
+
+```R
+m.2 %>%
+  as_draws_df() %>%
+  mutate(contrast = 
+           (`b_suppOJ:dose0.5` + `b_suppOJ:dose1` + `b_suppOJ:dose2`)/3 - 
+           (`b_suppVC:dose0.5` + `b_suppVC:dose1` + `b_suppVC:dose2`)/3) %>%
+  median_hdi(contrast)
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+  contrast .lower .upper .width .point .interval
+     <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1     3.39   1.58   5.37   0.95 median hdi   
+```
+
+Credibly higher for the `OJ` group - analogous to a main effect of group that you would get in an ANOVA. We could do the same thing for levels of dose, if we chose to. It's also easy to check for interaction between the fixed effects, and one appears to be obvious from our model output. We already know that tooth length is higher for the `OJ` relative to the `VC` group at `dose = 1`, so let's compute the contrasts for the other levels of `dose`:
+
+```R
+m.2 %>%
+  as_draws_df() %>%
+  mutate(contrast = `b_suppOJ:dose0.5` - `b_suppVC:dose0.5`) %>%
+  median_hdi(contrast)
+```
+
+Output: 
+
+```R
+# A tibble: 1 × 6
+  contrast .lower .upper .width .point .interval
+     <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1     4.79   1.46   8.25   0.95 median hdi 
+```
+
+Same pattern for low doses. What about high doses?
+
+```R
+m.2 %>%
+  as_draws_df() %>%
+  mutate(contrast = `b_suppOJ:dose2` - `b_suppVC:dose2`) %>%
+  median_hdi(contrast)
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+  contrast .lower .upper .width .point .interval
+     <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1  -0.0765  -3.40   3.30   0.95 median hdi   
+```
+
+Just as I suspected - no credible difference at higher doses. Thus, it seems that `supp` and `dose` interact such that tooth length is higher for the `OJ` group relative to the `VC` group and low and medium doses, but length is similar at high doses. If this study wasn't so mundane, maybe this would be a very interesting finding. 
+
+The reason I've gone through all these arbitrary contrasts is to show you that you can really do whatever you please with the posterior when estimating parameters. This is a verstaile approach and I believe working with posteriors in this manner is about as intuitive as statistics can be, once you get past the more intimidating parts of the code. As a final exercise, let's put together some visualizations of our more complex model. One option would be to plot the estimates for each condition by group. This should do a fairly good job of conveying the pattern of results we observed. Here's how we could do it:
+
+```R
+m.2 %>%
+  as_draws_df() %>%
+  pivot_longer(cols = `b_suppOJ:dose0.5`:`b_suppVC:dose2`,
+               names_to = 'Dose',
+               values_to = 'Length') %>%
+  mutate(Supp = if_else(grepl('VC', Dose), 'VC', 'OJ')) %>%
+  mutate(Dose = case_when(grepl('0.5', Dose) ~ 'Low',
+                               grepl('1', Dose) ~ 'Mid',
+                               grepl('2', Dose) ~ 'High')) %>%
+  mutate(Dose = factor(Dose, levels = c('Low', 'Mid', 'High'))) %>%
+  ggplot(aes(x = Length, y = Dose, fill = Supp)) +
+  stat_halfeye(position = position_dodge(width = 0.9), 
+               scale = 0.7, slab_alpha = 1,
+               point_interval = median_hdi) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_classic()
+```
+
+Which gives you this:
+
+![complex-model-plot1](https://github.com/jed709/jed709.github.io/assets/87210399/f0aa1e76-195d-4f2a-aad8-b4e98f453e79)
+
+Pretty cool, right? And it's informative, too! You can see the HDI, the full posterior, and the pattern of results is pretty easy to pick out. Of course, there are other ways we could visualize the data. For example, if we thought the `OJ` group would generally have much higher tooth length relative to the `VC` group, we might want to graphically highlight the contrast between levels of `supp` at different levels of `dose`. Hypothetical, of course, but here's how you could do that:
+
+```R
+m.2 %>%
+  as_draws_df() %>%
+  mutate('OJ Low - VC Low' = `b_suppOJ:dose0.5` - `b_suppVC:dose0.5`,
+         'OJ Mid - VC Mid' = `b_suppOJ:dose1` - `b_suppVC:dose1`,
+         'OJ High - VC High' = `b_suppOJ:dose2` - `b_suppVC:dose2`) %>%
+  pivot_longer(cols = `OJ Low - VC Low`:`OJ High - VC High`, 
+               names_to = 'Contrast', values_to = 'Length') %>%
+  mutate(Contrast = factor(Contrast,
+                           levels = c('OJ Low - VC Low',
+                                      'OJ Mid - VC Mid',
+                                      'OJ High - VC High'))) %>%
+  ggplot(aes(x = Length, y = Contrast)) +
+  stat_halfeye(slab_fill = 'firebrick4',
+               slab_alpha = 0.8, 
+               point_interval = median_hdi) + 
+  geom_vline(xintercept = 0, linetype = 'dashed') +
+  theme_classic()
+```
+
+That will give you a plot like this:
+
+![complex-model-con](https://github.com/jed709/jed709.github.io/assets/87210399/e36cfa10-9864-4a44-beab-0cc99a126764)
+
+Here, I added a line at 0 so it's easy to tell if a contrast is credible or not. If this was the comparison we were interest it, a plot like this would do a very good job communicating it. 
+
+Hopefully, this tutorial has conveyed that you can do a great deal with Bayesian parameter estimation. Unlike other approaches, you are not at all limited in the comparisons you can make. For even more complex designs, the general principles demonstrated here still apply. Hopefully you can transfer this knowledge to your own research - good luck!
