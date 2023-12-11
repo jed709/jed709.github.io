@@ -21,12 +21,158 @@ For this tutorial, I will assume that readers have some baseline knowledge of (1
 With that out of the way, let's get started. 
 
 ---
-Part I: Why use parameter estimation?
+Part I: Why parameter estimation?
 ---
 
-Assuming you are at least slightly familiar with Bayesian statistics, you are probably familiar with Bayes Factors. Bayes Factors are an intuitive and easily interpretable alternative to approaches that our statistics courses have taught us to distrust, like null hypothesis significance testing. So why would we want to use paramater estimation? The output of regression models is messy and more difficult to interpet. Can't we just stick with model comparison using Bayes Factors? The issue here is that Bayes Factors do not necessarily provide a complete, nuanced picture of our beliefs. Like everything else in life, statistics is not black and white. It is difficult - and probably not best practice - to condense our beliefs about something down to a single number. This is where Bayesian parameter estimation comes in: Using this approach, we can map out _distributions_ of beliefs that quantify our uncertainty about the data.
+Assuming you are at least slightly familiar with Bayesian statistics, you are probably familiar with Bayes Factors. Bayes Factors are an intuitive and easily interpretable alternative to approaches that our statistics courses have taught us to distrust, like null hypothesis significance testing. So why would we want to use paramater estimation? The output of regression models is messy and more difficult to interpet. Can't we just stick with model comparison using Bayes Factors? 
 
-To demonstrate this, let's start with using Bayes Factors. We'll work through an example using the built-in `sleep` dataset.
+In some cases, we can. However, we might run into some problems in other cases, such as when we want to use custom priors. Although the `BayesFactor` package allows for priors, you are pretty limited in what you can do with them. If you wanted to use priors resembling anything other than a Cauchy distribution, you're pretty well out of luck. Further, what if you wanted to apply different priors to different model terms? This is common, and it will not be easy - and in some cases, it will not be possible - using `BayesFactor`. 
+
+Finally, and perhaps most importantly, what about all of the uncertainty in our data? Often, at least part of our motivation to take a Bayesian approach to statistics is that we don't want our inferences to boil down to just a _p_- value. Like _p_-values, Bayes Factors don't do the best job quantifying the uncertainty surround our estimates. In the frequentist world, there has been a general movement towards emphasis on confidence intervals over _p_-values to avoid some of the problems that have led to the replication crisis we currently find ourselves in. If we want to take a comparable, Bayesian approach, we must use parameter estimation. Accordingly, we should get started and learn how to do it.
+
+Let's start off gently by working through a simple example. In this vignette, you will estimate a parameter using Bayes' Theorem, which you should already be familiar with. To set the scene, imagine that you have a jar full of marbles. You can see into the jar and can therefore determine that there are two colors of marbles in there: Red and black. However, you don't know how many marbles there are in total, nor do you how many of each color there are. Based on this, how would you figure out the probability of drawing a black marble from the jar? Not the most practical example, of course - if we really wanted to know that badly, we could just dump out the jar and count up the marbles. However, it works well for the purposes of this demonstration, so we'll stick with it for now.
+
+To address our question, we could start by taking a sample from the jar. Let's say that we do that by drawing 10 marbles from the jar, and that we observe 7 black marbles and 3 red marbles. Now we have some data to answer our question. Based on this sample, we might say that the probability of drawing a black marble is around 70%, given that's what we see in our data. 
+
+It's a reasonable conclusion to draw, but surely we're not certain of this. We only took a small sample from a larger population of marbles, which is of an unknown size. There are plenty of other probabilities that are possible - we could have obtained the same result by chance if the probability was 50%, 90%, 10%, etc. To take a nuanced aproach to our problem, let's map out the likelihood of drawing a black marble - given our data - along a continuum. We could do that like this:
+
+```R
+theta <- seq(0, 1, length.out = 100)
+```
+
+And if you view the `theta` variable:
+
+Output:
+
+```R
+  [1] 0.00000000 0.01010101 0.02020202 0.03030303 0.04040404 0.05050505 0.06060606 0.07070707 0.08080808 0.09090909
+ [11] 0.10101010 0.11111111 0.12121212 0.13131313 0.14141414 0.15151515 0.16161616 0.17171717 0.18181818 0.19191919
+ [21] 0.20202020 0.21212121 0.22222222 0.23232323 0.24242424 0.25252525 0.26262626 0.27272727 0.28282828 0.29292929
+ [31] 0.30303030 0.31313131 0.32323232 0.33333333 0.34343434 0.35353535 0.36363636 0.37373737 0.38383838 0.39393939
+ [41] 0.40404040 0.41414141 0.42424242 0.43434343 0.44444444 0.45454545 0.46464646 0.47474747 0.48484848 0.49494949
+ [51] 0.50505051 0.51515152 0.52525253 0.53535354 0.54545455 0.55555556 0.56565657 0.57575758 0.58585859 0.59595960
+ [61] 0.60606061 0.61616162 0.62626263 0.63636364 0.64646465 0.65656566 0.66666667 0.67676768 0.68686869 0.69696970
+ [71] 0.70707071 0.71717172 0.72727273 0.73737374 0.74747475 0.75757576 0.76767677 0.77777778 0.78787879 0.79797980
+ [81] 0.80808081 0.81818182 0.82828283 0.83838384 0.84848485 0.85858586 0.86868687 0.87878788 0.88888889 0.89898990
+ [91] 0.90909091 0.91919192 0.92929293 0.93939394 0.94949495 0.95959596 0.96969697 0.97979798 0.98989899 1.00000000
+```
+
+This gives us a sequence of probabilities between zero and 1. In our case, we went from 0 to 100. That's because 100 is a nice, round number that is easy to think about, but we could create a larger or smaller sequence if we wanted to. Now that we have a sequence of probabilities, we can map the likelihood of drawing a black marble to this sequence, like so:
+
+```R
+lik <- dbinom(x = 7, prob = theta, size = 10)
+```
+
+And if you view the `lik` variable:
+
+```R
+  [1] 0.000000e+00 1.248842e-12 1.550081e-10 2.567390e-09 1.863889e-08 8.609995e-08 2.987699e-07 8.509011e-07
+  [9] 2.096927e-06 4.626519e-06 9.354042e-06 1.762082e-05 3.130803e-05 5.295758e-05 8.589786e-05 1.343711e-04
+ [17] 2.036589e-04 3.002018e-04 4.317098e-04 6.072597e-04 8.373761e-04 1.134092e-03 1.510985e-03 1.983193e-03
+ [25] 2.567390e-03 3.281743e-03 4.145828e-03 5.180517e-03 6.407824e-03 7.850719e-03 9.532907e-03 1.147857e-02
+ [33] 1.371209e-02 1.625768e-02 1.913911e-02 2.237925e-02 2.599971e-02 3.002040e-02 3.445910e-02 3.933103e-02
+ [41] 4.464834e-02 5.041970e-02 5.664987e-02 6.333920e-02 7.048328e-02 7.807252e-02 8.609179e-02 9.452014e-02
+ [49] 1.033305e-01 1.124895e-01 1.219572e-01 1.316874e-01 1.416271e-01 1.517169e-01 1.618912e-01 1.720783e-01
+ [57] 1.822010e-01 1.921769e-01 2.019188e-01 2.113359e-01 2.203342e-01 2.288173e-01 2.366880e-01 2.438488e-01
+ [65] 2.502034e-01 2.556581e-01 2.601229e-01 2.635135e-01 2.657521e-01 2.667698e-01 2.665076e-01 2.649182e-01
+ [73] 2.619679e-01 2.576377e-01 2.519251e-01 2.448454e-01 2.364329e-01 2.267422e-01 2.158487e-01 2.038492e-01
+ [81] 1.908622e-01 1.770280e-01 1.625074e-01 1.474809e-01 1.321472e-01 1.167202e-01 1.014258e-01 8.649835e-02
+ [89] 7.217488e-02 5.868936e-02 4.626519e-02 3.510662e-02 2.538857e-02 1.724502e-02 1.075559e-02 5.930271e-03
+ [97] 2.692103e-03 8.576724e-04 1.151892e-04 0.000000e+00
+```
+
+Here, we used the density function of the binomial distribution - because our data deals with a binary outcome, either black or not black - to get the likelihood of each potential probability. That sounds very abstract, so let's make it concrete by visualizing it:
+
+```R
+plot(theta, lik, type = 'l')
+```
+
+Output:
+
+![pptplot1](https://github.com/jed709/jed709.github.io/assets/87210399/040ccdd9-6d05-4cc1-81c1-98037f20ac35)
+
+_Note: I used `ggplot2` here to do some fancier things, like putting a line where the likelihood is the highest. However, it's easier to visualize simple things like this using base `R` graphics._
+
+This makes it much easier to understand. For each probability, we have a likelihood, as indicated by the density of the curve: The more likely values for the probability of interest occur at the denser regions of the distribution. As we can see, the highest - or maximum - likelihood occurs at exactly 0.7. This would thereby produce similar inferences to what we concluded based on our sample: The most likely probability of drawing a black marble, based on our data, is 70%. However, look at all the uncertainty within this distribution. Based on the density, it looks like values ranging from ~0.5 to 0.8 are still plenty likely. 
+
+Now that we've mapped out our beliefs about the likelihood along a continuum, we could take a better stab at solving the problem by trying to incorporate some prior knowledge. In our case, we could do this by simply inspecting our jar of marbles - this is the whole population we are concerned with, after all. Let's say we do this, and based on what we can see, it seems the proportion of black and red marbles appears approximately equal. However, there are a lot of marbles are in there, so we're not totally sure. Thus, likelihood aside, our prior beliefs might be that the probability of drawing a black marble from the jar is around 50%, give or take - we think it might a little bit lower, or a little bit higher. This is the form priors often take in the real world: We can come up with a reasonable range of values within which we expect a parameter to fall, but there will always be some uncertainty in there. Fortunately, it's quite easy to translate this into something practical that we can work with. All we have to do is map out our priors along a continuum, just like we did with our likelihood:
+
+```R
+prior <- dnorm(x = prob, mean = .5, sd = .1)
+```
+
+Here, we conceptualize our priors as a normal distribution with a mean of 0.5 - reflecting our belief that the probability of drawing a black marble is approximately 50% - but also with a standard deviation of 0.1, reflecting our uncertainty. Let's visualize this next to our likelihood:
+
+```R
+lines(theta, dnorm(x = theta, mean = .5, sd = .1)/15, col = 'red')
+```
+
+Output:
+
+![pptplotx](https://github.com/jed709/jed709.github.io/assets/87210399/b0d2aa6a-6604-43c7-b0da-964083e237f7)
+
+Makes sense, right? 
+
+Now we've got both a likelihood distribution and a prior distribution. This should sound familiar to you - we now have all the ingredients we need to solve Bayes' Theorem. Previously, you've probably done this with discrete values, but it is no different working with distributions. Fortunately, `R` can do all the math on the distributions for us - this would be irritating to do by hand. The formula is the same, though, so let's try it.
+
+First we calculate the marginal likelihood:
+
+```R
+marg = sum(prior*lik)
+```
+
+Then we can calculate the standardized posterior distribution:
+
+```R
+post = (prior*lik)/marg
+```
+
+And finally, plot the standardized posterior:
+
+```R
+lines(theta, post, 
+      col = "blue")
+```
+
+Output:
+
+![pptploty](https://github.com/jed709/jed709.github.io/assets/87210399/ae51f8c8-96cd-45d7-b523-312b539dbae5)
+
+Now we can see it. The reason the posterior distribution is all the way down there is because we've standardized it by dividing by the marginal likelihood. This ensures that all the probabilties in there will sum up to one, which is what we want. As you can see, the posterior is sort of a compromise between the prior and the likelihood, falling in between the two distributions we used to calculate it. But you'd know this, anyway, from previously learning about Bayes' theorem. 
+
+So, now we have a posterior distribution. So what? Well, for one thing, you've now successfully estimated a parameter using Bayesian inference - way to go! Additionally, having this parameter exist along a continuum like this is quite powerful. So what can we do with it? To start, we can see that the highest probability density is around 0.55 or so. Thus, given our prior knowledge and given our data, the the most likely probability of drawing a black marble is somewhere around 55%. Fascinating! But you can do a bit more with it, because it is a distribution. For example, what if we wanted to know how likely it is that the probability of drawing a black marble is greater than 50%? We could calculate this easily, like so:
+
+```R
+sum(post[theta > .5])
+```
+
+Output:
+
+```R
+[1] 0.753321
+```
+
+The line of code we used gives us the sum of all the posterior probability within the region that we specified. So, in this case, we summed all the posterior probability that exists for probabilities of drawing a black marble above 50%. Pretty neat, right? This suggests that we're pretty confident (75.3% confident, to be precise) that the probability of drawing a black marble is higher than 50%. We could ask more specific questions of the distribution, too. For example, how likely is it that the probability of drawing a black marble falls between 50% and 60%? We could check, like this:
+
+```R
+sum(post[theta > .5 & theta < .7])
+```
+
+Output:
+
+```R
+0.7100376
+```
+
+We're pretty flexible in what we can do with posterior distributions. With more complex models, we can do even more interesting things. 
+
+Hopefully this gives you a general idea of what's going on with respect to parameter estimation, as well why it is useful. Mapping out all of our beliefs as distributions - rather than discrete values - helps us incoporate and quantify all that uncertainty we see in the data, which is quite valuable. Now that we've gone over the basic concept, let's work through a more complex - but also more practical - example of what we can do with parameter estimation. 
+
+---
+Part II: Parameter estimation using _BayesFactor_
+---
+
+Model comparison approaches using Bayes Factors have their place, but they are suited to different kinds of questions compared to the questions you might use parameter estimation for. For example, a good question to answer with Bayes Factors could be something like "Is there a difference between conditions/groups?" Let's try and answer this question as it pertains to the built-in `sleep` dataset.     
 
 First, we assign the built-in dataset to a variable so we can modify it and recover the original if necesssary:
 
@@ -34,8 +180,7 @@ First, we assign the built-in dataset to a variable so we can modify it and reco
 d <- sleep
 ```
 
-Next, let's conduct a Bayes Factor t-test using the `ttestBF` function from the `BayesFactor` package. For this example, we'll compare the extra hours
-of sleep that each condition receieved. Note that this paired data, despite the fact that the condition variable is named `group`.
+Next, let's conduct a Bayes Factor t-test using the `ttestBF` function from the `BayesFactor` package. For this example, we'll compare the extra hours of sleep that each condition receieved. Note that this paired data, despite the fact that the grouping variable is named `group`.
 
 ```R
 ttestBF(d[d$group == 1,]$extra,
@@ -57,13 +202,7 @@ Against denominator:
 Bayes factor type: BFoneSample, JZS
 ```
 
-According to our trusty rules of thumb, the evidence here is pretty solid: A difference between groups is favored over a null model by a factor of about 17. But where exactly do we derive this from? Does this Bayes Factor provide a full picture of our belief in the effect? Probably not.
-
-To demonstrate this, it might help to know what our posterior for this test would actually look like. Let's repeat this test, but this time we'll generate a posterior
-distribution and save it as a variable. For the purposes of this example, we'll draw 10000 samples from the posterior. Because 
-sampling from the posterior is an iterative process, the samples drawn will vary slightly everytime this test is repeated, even if
-we are working with the exact same dataset. To ensure we all get the exact same values, I include a call to `set.seed()` before
-running the test.
+According to our trusty rules of thumb, the evidence here is pretty solid: A difference between groups is favored over a null model by a factor of about 17. Simple and intuitive. But what if we had a slightly more nuanced question about the data - perhaps something like "_what_ is the difference between conditions?" We could do this using parameter estimation. To do so, we'll first have to create a posterior distribution we can work with. For simple designs, this is possible with the `BayesFactor` package. Here's how:
 
 ```R
 set.seed(999)
@@ -76,10 +215,12 @@ sleep.post <- ttestBF(d[d$group == 1,]$extra,
                      data = d)
 ```
 
-We've successfully saved our posterior in the `sleep.post` variable. Let's take a look at it:
+What did we do here? Let's break it down. Essentially, we conducted the same test as before. Under the hood, the `ttestBF` function is using a posterior distribution to come up with the Bayes Factor you see. This time, we told the function to draw _samples_ from this distribution - 10000 of them, to be precise - in order to create a posterior distribution that we can work with. This happens iteratively, using a random sampling algorithm that is far too complex to discuss here. Because this process is random, I included a call to `set.seed()` to ensure your answers would match mine here. If you exclude this function, you will get slightly different answers. However, because we are taking a lot of samples from the posterior, our answers will be pretty close. In order to reduce this sort of simulation error, you should always be working with a large number of posterior samples to draw trustworthy conclusions from the data. 
+
+With that in mind, we've successfully generated and saved a posterior distribution in the `sleep.post` variable. Let's take a look at it:
 
 ```R
-head(supp.post)
+head(sleep.post)
 ```
 
 Output:
@@ -99,8 +240,9 @@ Thinning interval = 1
 [7,] -1.277349 2.6216533 -0.7889002 0.8153779
 ```
 
-There's a lot going on there. For the purposes of this tutorial, we're going to ignore most of it. The parameter
-of interest to us is `mu`. This parameter reflects posterior samples - 10000 of them, to be precise - for the unstandardized difference in `extra` between conditions. That might sound somewhat absract - what does it _mean_?. To make it concrete, let's visualize the distribution of our posterior using `ggplot2`:
+There's a lot going on there. For the purposes of this tutorial, we're going to ignore most of it. The parameter of interest to us is `mu`. This parameter reflects posterior samples - 10000 of them, to be precise - for the unstandardized difference in `extra` between conditions. If you're curious, `sig2` reflects posterior samples for variance and `delta` reflects the same for the standardized difference between conditions. 
+
+To make this more concrete, let's visualize the posterior distribution for our parameter of interest using `ggplot2`:
 
 ```R
 sleep.post %>%
@@ -115,9 +257,7 @@ You'll get a figure that looks something like this:
 
 Pretty neat, but what does this distribution tell us? 
 
-Essentially, it tells us how our beliefs about `mu` are distributed: The higher the density of a given value, the higher the
-posterior probability of that value. As we can see, it appears that our posterior density is highest for values of around 1.5 or so,
-meaning values in this region are the most probable. This should be reflected if we calculate descriptive statistics for `mu`:
+Essentially, it tells us how our beliefs about `mu` are distributed: Much like our marble example, the higher the density of a given value, the higher the posterior probability of that value. As we can see, it appears that our posterior density is highest for values of around 1.5 or so, meaning values in this region are the most probable. This should be reflected if we calculate descriptive statistics for `mu`:
 
 ```R
 mean(sleep.post[,'mu'])
@@ -133,30 +273,17 @@ Output:
 [1] -1.415092
 ```
 
-That checks out, then: It seems that the most likely values for mu are around 1.4. 
+That checks out, then: It seems that the most likely values for mu are around -1.4. That gives us an answer for our original question: The difference between conditions is around -1.4.
 
-But why leave it at that? One of the main advantages of estimating parameters is that your posterior quantifies your _distribution_
-of beliefs about the data. Accordingly, a single estimate for `mu` does not necessarily represent this distribution adequately. Looking
-at our figure, we can see our posterior includes values ranging from below -4 to upwards of 1. That's a lot of uncertainty about the value of `mu`! 
-Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - 
-and therefore probability - is quite low. But what about values around -2, or around -0.5? The probability of these values is still fairly
-high, and a single estimate derived from the posterior doesn't really capture this. 
+But why leave it at that? One of the main advantages of estimating parameters is that your posterior quantifies your _distribution_ of beliefs about the data. Accordingly, a single estimate for `mu` does not necessarily represent this distribution adequately. Looking at our figure, we can see our posterior includes values ranging from below -4 to upwards of 1. That's a lot of uncertainty about the value of `mu`! A mean or median estimate would largely ignore all this, which we want to avoid doing. 
 
-Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we
-use the full posterior, we might overemphasize extreme values that are very unlikely. So what is the solution? 
+Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - and therefore probability - is quite low. But what about values around -2, or around -0.5? The probability of these values is still fairly high, and a single estimate derived from the posterior doesn't really capture this. Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we deal with the full range of values in the posterior, we might overemphasize extreme values that are very unlikely. Thus also wouldn't be a good representation of our beliefs, because we don't have much faith in values near -4 or 1.5. We need a compromise. What's the solution?
 
-One common approach is to compute a _Credible Interval_, which essentially trims the most extreme values off of
-the posterior distribution. This will provide a more complete representation of the posterior than a single estimate,
-but it also won't emphasize extremely improbable values that exist on either end of the range. It will also allow us to make
-inferences from the posterior, as I will explain below.
+One common approach is to compute a _Credible Interval_, which essentially trims the most extreme values off of the posterior distribution. This will provide a more complete representation of the posterior than a single estimate, but it also won't emphasize extremely improbable values that exist on either end of the range. It will also allow us to make inferences from the posterior, as I will explain below. There are several possible approaches we could take to compute such an interval, but I'll focus on the Highest Posterior Density Interval (HPDI), which contains the highest density of posterior probability for a given confidence level. For example, the HDPI for a confidence level of 95% would take 95% of the posterior probability where the parameter is most dense. 
 
-There are several possible approaches we could take to compute such an interval, but I'll focus on the Highest Posterior Density Interval (HPDI), which contains
-the highest-probability values for a given confidence level. The confidence level is entirely arbitrary. Although 95% is a common cutoff, there
-is no reason this cutoff must be used. We could use 99%, 50%, 89% (as McElreath likes to do), or any other value that we believe is justified. To keep things
-simple and straightforward, I'll stick with 95%; however, keep in mind that you don't have to.
+The confidence level is entirely arbitrary. Although 95% is a common cutoff, there is no reason this cutoff must be used. We could use 99%, 50%, 89% (as McElreath likes to do), or any other value that we believe is justified. To keep things simple and straightforward (and because 95% confidence is the default for the `tidybayes` functions we're working with), I'll stick with 95%. Just keep in mind that you don't have to.
 
-With that in mind, let's go back into _R_ and do something concrete. Now that we know what the HDPI is, let's compute this interval for `mu` 
-using the `tidybayes` package:
+With that in mind, let's go back into _R_ and do something concrete. Now that we know what the HDPI is, let's compute this interval for `mu` using the `tidybayes` package:
 
 ```R
 sleep.post %>%
@@ -173,25 +300,20 @@ Output:
 1 -1.42  -2.29 -0.501   0.95 median hdi 
 ```
 
-Our estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50.
-Let's visualize the HDPI, with the 95% confidence region shaded in blue:
+Our median estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50. Let's visualize the HDPI, with the 95% confidence region shaded in blue:
 
 ![hdpi](https://github.com/jed709/jed709.github.io/assets/87210399/b849d620-f71b-4407-b229-cec9356e0c65)
 
-As we can see, the HDPI cuts off all the extreme values that don't fall within our arbitrary confidence region. Thus, this interval
-provides a good representation of the values in our posterior that we deem credible. Now that we have a Credible Interval, making inferences about
-the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms
-of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. 
-Because our Credible Interval does not contain zero, we can say that the effect of condition on sleep is _credible_. 
+As we can see, the HDPI cuts off all the extreme values that don't fall within our arbitrary confidence region. Thus, this interval provides a pretty good representation of the values in our posterior that we deem credible. 
 
-Let's return to the Bayes Factor we computed earlier. The inferences we derive from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the Bayes Factor did not provide a complete picture of the effect. With parameter estimation, then, we can accomplish things that Bayes Factors cannot. Rather than a ratio of evidence,
-we can compute a distribution of beliefs about a model that incorporates uncertainty. 
+Now that we have a Credible Interval, making inferences about the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. Because our Credible Interval does not contain zero, we can say that the effect of condition on sleep is _credible_. This is similar to how people make inferences from frequentist confidence intervals, with one key difference: This interpretation of Bayesian intervals is actually _correct_. So, it's pretty intuitive and probably fairly in tune with how you think about confidence intervals anyway. 
 
-But we can only do so much with the `BayesFactor` package.
-What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With this `BayesFactor`, the latter is possible, but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
+Let's return to the Bayes Factor we computed earlier. The inferences we derived from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the Bayes Factor did not provide a complete picture of the effect. With parameter estimation, then, we can accomplish things that Bayes Factors cannot. Rather just a ratio of evidence, we were able to quantify the size of the effect - alongside uncertainty - and provide a range of plausible values for our parameter of interest. 
+
+But we can only do so much with the `BayesFactor` package. What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With the `BayesFactor` package, the latter is possible, but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
 
 ---
-Part II: The Basics of Estimating Parameters Using _brms_
+Part III: The Basics of Estimating Parameters Using _brms_
 ---
 
 Although we will work with a more complex design in this section, the basics we learned about working with the posterior still apply here. For our
@@ -389,7 +511,7 @@ Cool plot, right? It contains a lot of information. The point is your median pos
 Now that we understand the basics of fitting models with `brms` and working with the posteriors they generate, let's go through a more complex - but more practical - example, using the same dataset.
 
 ---
-Part III: A Practical Example
+Part IV: A Practical Example
 ---
 
 You might have noticed that we fit our model of the `ToothGrowth` dataset without specifying any priors. This is not great. When we don't specify priors, `brms` uses default priors. What does this mean, exactly? To understand, we need to take a look at the priors the model used, which we can access using `prior_summary`:
