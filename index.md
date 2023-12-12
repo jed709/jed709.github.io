@@ -16,9 +16,23 @@ library(brms)
 library(tidybayes)
 ```
 
-For this tutorial, I will assume that readers have some baseline knowledge of (1) Bayesian reasoning and statistics and (2) linear regression. This guide is intended to be practical and to show you that you - yes, you - can estimate parameters using Bayesian methods. I will briefly cover theoretical concepts where necessary, but my approach throughout this guide will be largely hands-on. 
+This guide is intended to be practical and to show you that you - yes, you - can estimate parameters using Bayesian methods. I will briefly cover theoretical concepts where necessary, but my approach throughout this guide will be largely hands-on, as my hope is that you will be able to transfer skills that you learn here to your own research. For this tutorial, I will assume that readers have some baseline knowledge of a number of core concepts. If you are totally unfamiliar with any of the concepts listed below, I have linked free online tutorial resources that you may find helpful as an introduction to these concepts:
 
-With that out of the way, let's get started. 
+[Bayesian reasoning and inference](https://www.lesswrong.com/posts/CMt3ijXYuCynhPWXa/bayes-theorem-illustrated-my-way) and [model comparison using Bayes Factors](https://www.aarondefazio.com/tangentially/?p=90)
+
+[General familiarity with _R_ and RStudio](https://www.dataquest.io/blog/tutorial-getting-started-with-r-and-rstudio/)
+
+[Data wrangling in _R_ using `tidyverse`](https://www.datacamp.com/tutorial/tidyverse-tutorial-r)
+
+[Creating graphics in _R_ with `ggplot2`](https://www.cedricscherer.com/2019/08/05/a-ggplot2-tutorial-for-beautiful-plotting-in-r/)
+
+[Conducting and interpreting linear regression in _R_](https://www.r-bloggers.com/2020/05/step-by-step-guide-on-how-to-build-linear-regression-in-r-with-code/)
+
+Additionally, for information on how to install the `brms` package (as this can be difficult), refer to [this resource](https://learnb4ss.github.io/learnB4SS/articles/install-brms.html).
+
+Note that some of these tutorials may be more exhuastive than necessary with respect to covering assumed background knowledge for this tutorial. Nonetheless, they are all useful resources. 
+
+With all that out of the way, let's get started. 
 
 ---
 Part I: Why parameter estimation?
