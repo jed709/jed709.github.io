@@ -4,8 +4,7 @@ layout: home
 ---
 
 ===============
-Practical Introduction to Bayesian Parameter Estimation: 
-A Tutorial for NeuroFrogs
+A Practical Introduction to Bayesian Parameter Estimation
 ===============
 
 
