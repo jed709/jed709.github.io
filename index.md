@@ -330,7 +330,7 @@ But why leave it at that? One of the main advantages of estimating parameters is
 
 Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - and therefore probability - is quite low. We don't really consider these to be particularly likely values for `mu`, so we shouldn't emphasize them too strongly. But what about values around -2, or around -0.5? The probability of these values is still fairly high, and a single estimate derived from the posterior doesn't really capture this.
 
-Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we deal with the full range of values in the posterior, we might overemphasize extreme values that are very unlikely. Thus also wouldn't be a good representation of our beliefs, because we don't have much faith in values near -4 or 1.5. We need a compromise. What's the solution?
+Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we deal with the full range of values in the posterior, we might overemphasize extreme values that are very unlikely. This also wouldn't be a good representation of our beliefs, because we don't have much faith in values near -4 or 1.5. We need a compromise. What's the solution?
 
 One common approach is to compute a _Credible Interval_ (CI), which essentially trims off a portion of the posterior probability corresponding to a given confidence level. For example, a CI with a confidence level of 95% would retain 95% of the posterior probability, whereas a confidence level of 80% would retain 80% of the probability. Simple enough. 
 
