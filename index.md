@@ -6,6 +6,8 @@ layout: home
 ===============
 Practical Introduction to Bayesian Parameter Estimation: A Tutorial for NeuroFrogs
 ===============
+
+
 ---
 by Jedidiah Whitridge
 ---
