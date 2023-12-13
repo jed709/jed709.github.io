@@ -42,13 +42,17 @@ Assuming you are at least slightly familiar with Bayesian inference, you are pro
 
 In some cases, we can. However, we might run into some problems in other cases, such as when we want to use custom priors. Although the `BayesFactor` package allows for priors, you are pretty limited in what you can do with them. If you wanted to use priors resembling anything other than a Cauchy distribution, you're pretty well out of luck. Further, what if you wanted to apply different priors to different model terms? This is common, and it will not be easy - and in some cases, it will not be possible - using `BayesFactor`. 
 
-Finally, and perhaps most importantly, what about all of the uncertainty in our data? Often, at least part of our motivation to take a Bayesian approach to statistics is that we don't want our inferences to boil down to just a _p_- value. Like _p_-values, Bayes Factors don't do the best job quantifying the uncertainty surround our estimates (for more info, see [this blog](https://daniellakens.blogspot.com/2016/07/dance-of-bayes-factors.html). In the Frequentist world, there has been a general movement towards emphasis on confidence intervals over _p_-values to avoid some of the problems that have led to the replication crisis we currently find ourselves in. If we want to take a comparable, Bayesian approach, we must use parameter estimation. Accordingly, we should get started and learn how to do it.
+Finally, and perhaps most importantly, what about all of the uncertainty in our data? Often, at least part of our motivation to take a Bayesian approach to statistics is that we don't want our inferences to boil down to just a _p_- value. Like _p_-values, Bayes Factors don't do the best job quantifying the uncertainty surround our estimates (for more info, see [this blog](https://daniellakens.blogspot.com/2016/07/dance-of-bayes-factors.html)). In the Frequentist world, there has been a general movement towards emphasis on confidence intervals over _p_-values to avoid some of the problems that have led to the replication crisis we currently find ourselves in. If we want to take a comparable, Bayesian approach, we must use parameter estimation. Accordingly, we should get started and learn how to do it.
 
 Let's start off gently by working through a simple example. In this vignette, you will estimate a parameter using Bayes' Theorem, which you should already be familiar with. To set the scene, imagine that you have a jar full of marbles. You can see into the jar and can therefore determine that there are two colors of marbles in there: Red and black. However, you don't know how many marbles there are in total, nor do you how many of each color there are. Based on this, how would you figure out the probability of drawing a black marble from the jar? Not the most practical example, of course - if we really wanted to know that badly, we could just dump out the jar and count up the marbles. However, it works well for the purposes of this demonstration, so we'll stick with it for now.
 
-To address our question, we could start by taking a sample from the jar. Let's say that we do that by drawing 10 marbles from the jar, and that we observe 7 black marbles and 3 red marbles. Now we have some data to answer our question. Based on this sample, we might say that the probability of drawing a black marble is around 70%, given that's what we see in our data. 
+In this case, our unobserved _parameter_ is the probability of drawing a black marble from the jar. So how do we figure out what it is? To address our question, we could start by taking a sample from the jar. Let's say that we do that by drawing 10 marbles from the jar, and that we observe 7 black marbles and 3 red marbles. Now we have some data to answer our question. Based on this sample, we might say that the probability of drawing a black marble is around 70%, given that's what we see in our data. 
 
-It's a reasonable conclusion to draw, but surely we're not certain of this. We only took a small sample from a larger population of marbles, which is of an unknown size. There are plenty of other probabilities that are possible - we could have obtained the same result by chance if the probability was 50%, 90%, 10%, etc. To take a nuanced aproach to our problem, let's map out the likelihood of drawing a black marble - given our data - along a continuum. We could do that like this:
+It's a reasonable conclusion to draw, but surely we're not certain of this. We only took a small sample from a larger population of marbles, which is of an unknown size. There are plenty of other probabilities that are possible - we could have obtained the same result by chance if the probability was 50%, 90%, 10%, etc. 
+
+To start addressing this problem, let's figure out the _likelihood_ of our data given possible values for our unobserved parameter (i.e., the probability of drawing a black marble). You should be familiar with the _likelihood_ in the context of Bayesian inference. We're going to be working with that here, too. However, you might be familiar with Bayes' Theorem only as it pertains to discrete values. Here, we're going to expand that approach by mapping out the components of Bayes' Theorem along a continuum. Let's do that.
+
+We'll start by mapping out a number of potential values for our unobserved parameter, or _theta_ values. We can do that like this:
 
 ```R
 theta <- seq(0, 1, length.out = 100)
@@ -71,7 +75,9 @@ Output:
  [91] 0.90909091 0.91919192 0.92929293 0.93939394 0.94949495 0.95959596 0.96969697 0.97979798 0.98989899 1.00000000
 ```
 
-This gives us a sequence of probabilities between zero and 1. In our case, we went from 0 to 100. That's because 100 is a nice, round number that is easy to think about, but we could create a larger or smaller sequence if we wanted to. Given what you know about Bayes' Theorem, this should resemble model comparison, to some extent. Our `theta` values simply represent values that our unobserved parameter of interest (i.e., the probability of drawing a black marble) could potentially take on. In other words, we are mapping out 100 potential _models_ of the data. So, now that we have a continuum of models, we can map the likelihood of our unobserved parameter onto this sequence, like so:
+This gives us a sequence of probabilities between zero and 1. In our case, we went from 0 to 100. That's because 100 is a nice, round number that is easy to think about, but we could create a larger or smaller sequence if we wanted to - we're dealing with probabilities, so we could divide the sequence up infinitely, if we wanted to. 
+
+Given what you know about Bayes' Theorem, this should actually resemble model comparison. Our `theta` values represent values that our unobserved parameter of interest (i.e., the probability of drawing a black marble) could potentially take on, as I said above. In other words, we are mapping out 100 potential _models_ of the data. So, now that we have a continuum of models, we can map the likelihood of the data given each possible probability of our unobserved parameter, like so:
 
 ```R
 lik <- dbinom(x = 7, prob = theta, size = 10)
@@ -95,7 +101,7 @@ And if you view the `lik` variable:
  [97] 2.692103e-03 8.576724e-04 1.151892e-04 0.000000e+00
 ```
 
-Here, we used the density function of the binomial distribution - because our data deals with a binary outcome, either black or not black - to get the likelihood of each potential probability. That sounds very abstract, so let's make it concrete by visualizing it:
+Here, we used the density function of the binomial distribution - because our data deals with a binary outcome, either black or not black - to get the likelihood of each potential value. That sounds very abstract, so let's make it concrete by visualizing it:
 
 ```R
 plot(theta, lik, type = 'l')
@@ -107,15 +113,19 @@ Output:
 
 _Note: I used `ggplot2` here to do some fancier things, like putting a line where the likelihood is the highest. However, for the purposes of an example like this, it's easier to visualize simple things like this using base `R` graphics._
 
-This makes it much easier to understand. For each probability, we have a likelihood, as indicated by the density of the curve: The more likely values for the probability of interest occur at the denser regions of the distribution. As we can see, the highest - or maximum - likelihood occurs at exactly 0.7. This would thereby produce similar inferences to what we concluded based on our sample: The most likely probability of drawing a black marble, based on our data, is 70%. However, look at all the uncertainty within this distribution. Based on the density, it looks like values ranging from ~0.5 to 0.8 are still plenty likely. 
+This makes it much easier to understand. For each probability, we have a likelihood, as indicated by the density of the curve: The more likely values for our unobserved parameter occur at the denser regions of the distribution. As we can see, the highest - or maximum - likelihood occurs at exactly 0.7. This would thereby produce similar inferences to what we concluded based on our sample: Given our data, the most likely value of our unobserved parameter - that is, the probability of drawing a black marble from the jar - is 70%. However, look at all the uncertainty within this distribution. Based on the density, it looks like values ranging from ~0.5 to 0.8 are still plenty likely. 
 
-Now that we've mapped out our beliefs about the likelihood along a continuum, we could take a better stab at solving the problem by trying to incorporate some prior knowledge. In our case, we could do this by simply inspecting our jar of marbles - this is the whole population we are concerned with, after all. Let's say we do this, and based on what we can see, it seems the proportion of black and red marbles appears approximately equal. However, there are a lot of marbles are in there, so we're not totally sure. Thus, likelihood aside, our prior beliefs might be that the probability of drawing a black marble from the jar is around 50%, give or take - we think it might a little bit lower, or a little bit higher. This is the form priors often take in the real world: We can come up with a reasonable range of values within which we expect a parameter to fall, but there will always be some uncertainty in there. Fortunately, it's quite easy to translate this into something practical that we can work with. All we have to do is map out our priors along a continuum, just like we did with our likelihood:
+Now, we've mapped out our beliefs about the likelihood of each `theta` value along a continuum. Using this, we could take a better stab at solving the problem by trying to incorporate some prior knowledge. Again, you should be generally familiar with priors in the context Bayesian inference, although you might be used to working with discrete values, as with the likelihood. 
+
+In our case, we could come up with some priors by simply inspecting our jar of marbles - this is the whole population we are concerned with, after all. Let's say we do this, and based on what we can see, it seems the proportion of black and red marbles appears approximately equal. However, there are a lot of marbles in there, so we're not totally sure. Thus, likelihood aside, our prior beliefs might be that the probability of drawing a black marble from the jar is around 50%, give or take - we think it might a little bit lower, or a little bit higher. 
+
+This gives a prior for potential values of our unobserved parameter. But if you're used to dealing with discrete priors, our uncertainty might seem a bit confusing. However, this is the form priors often take in the real world: We can come up with a reasonable range of values within which we expect a parameter to fall, but there will always be some uncertainty in there. Fortunately, it's quite easy to translate this into something practical that we can work with. All we have to do is map out our priors along a continuum (i.e., a _prior distribution_), just like we did with our likelihood:
 
 ```R
 prior <- dnorm(x = prob, mean = .5, sd = .1)
 ```
 
-Here, we conceptualize our priors as a normal distribution with a mean of 0.5 - reflecting our belief that the probability of drawing a black marble is approximately 50% - but also with a standard deviation of 0.1, reflecting our uncertainty. Let's visualize this next to our likelihood:
+Here, we use the density function of the normal distribution to conceptualize our priors as a normal distribution with a mean of 0.5 - reflecting our belief that the probability of drawing a black marble is approximately 50% - but also with a standard deviation of 0.1, reflecting our uncertainty and willingness to accept values that are a bit higher and a bit lower. Let's visualize this next to our likelihood:
 
 ```R
 lines(theta, dnorm(x = theta, mean = .5, sd = .1)/15, col = 'red')
@@ -127,7 +137,7 @@ Output:
 
 Makes sense, right? 
 
-Now we've got both a likelihood distribution and a prior distribution. This should sound familiar to you - we now have all the ingredients we need to solve Bayes' Theorem. Previously, you've probably done this with discrete values, but it is no different working with distributions. Fortunately, `R` can do all the hard math on the distributions for us - this would be irritating to do by hand. The formula is the same, though, so let's try it.
+Now we've got both a likelihood distribution and a prior distribution - that means we have all the ingredients we need to solve Bayes' Theorem. Previously, you've probably done this with discrete values, but it is no different working with distributions. Fortunately, `R` can do all the hard math on the distributions for us - this would be irritating to do by hand. We're still going to calculate a posterior using the priors and the likelihood, but this time it will take the form of a posterior _distribution_. The formula is the same, so let's try it.
 
 First we calculate the marginal likelihood:
 
@@ -154,7 +164,9 @@ Output:
 
 Now we can see it. The reason the posterior distribution is all the way down there is because we've standardized it by dividing by the marginal likelihood. This ensures that all the probabilties in there will sum up to one, which is what we want. As you can see, the posterior is sort of a compromise between the prior and the likelihood, falling in between the two distributions we used to calculate it. But you'd know this, anyway, from previously learning about Bayes' theorem. 
 
-So, now we have a posterior distribution. So what? Well, for one thing, you've now successfully estimated a parameter using Bayesian inference - way to go! Additionally, having this parameter exist along a continuum like this is quite powerful. So what can we do with it? To start, we can see that the highest probability density is around 0.55 or so. Thus, given our prior knowledge and given our data, the the most likely probability of drawing a black marble is somewhere around 55%. Fascinating! But you can do a bit more with it, because it is a distribution. For example, what if we wanted to know how likely it is that the probability of drawing a black marble is greater than 50%? We could calculate this easily, like so:
+So, now we have a posterior distribution. So what? Well, for one thing, you've now successfully estimated a parameter using Bayesian inference - way to go! We've mapped out a distribution of our beliefs - using our likelihood and prior distributions - about the potential values of our unobserved parameter of interest, the probability of drawing a black marble from the jar. This distribution thereby provides an _estimate_ for our parameter. 
+
+So, what can we do with it? To start, we can see that the highest probability density is around 0.55 or so. Thus, given our prior knowledge and given our data, the the most likely value of our parameter is somewhere around 55%. Fascinating! But you can do a bit more with it, because it is a distribution. For example, what if we wanted to know _how_ likely it is that the probability of drawing a black marble is greater than 50%? We could calculate this easily, like so:
 
 ```R
 sum(post[theta > .5])
@@ -166,7 +178,7 @@ Output:
 [1] 0.753321
 ```
 
-The line of code we used gives us the sum of all the posterior probability within the region that we specified. So, in this case, we summed all the posterior probability that exists for probabilities of drawing a black marble above 50%. Pretty neat, right? This suggests that we're pretty confident (75.3% confident, to be precise) that the probability of drawing a black marble is higher than 50%. We could ask more specific questions of the distribution, too. For example, how likely is it that the probability of drawing a black marble falls between 50% and 60%? We could check, like this:
+The line of code we used gives us the sum of all the posterior probability within the region that we specified. So, in this case, we summed all the posterior probability that exists for probabilities of drawing a black marble above 50%. Pretty neat, right? This suggests that we're pretty confident (75.3% confident, to be precise) that the probability of drawing a black marble is higher than 50%. We could ask more specific questions of the distribution, too. For example, how likely is it that the probability of drawing a black marble falls between 50% and 70%? We could check, like this:
 
 ```R
 sum(post[theta > .5 & theta < .7])
