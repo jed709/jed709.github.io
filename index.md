@@ -202,7 +202,7 @@ Hopefully this gives you a general idea of what's going on with respect to param
 Part II: Parameter estimation using _BayesFactor_
 ---
 
-You should be familiar with model comparison using Bayes Factors - there is a resource linked at the top of this blog post, if not. Model comparison approaches using Bayes Factors certainly have their place, but they are suited to different kinds of questions compared to the questions you might use parameter estimation answer. For example, a good question to answer with model comparison could be something like this: 
+You should be familiar with model comparison using Bayes Factors - there is a resource linked at the top of this blog post, if not. Model comparison approaches using Bayes Factors certainly have their place, but they are suited to different kinds of questions compared to the questions you might use parameter estimation to answer. For example, a good question to answer with model comparison could be something like this: 
 
 "Is there a difference between conditions/groups?" 
 
