@@ -355,7 +355,7 @@ Output:
 1 -1.42  -2.29 -0.501   0.95 median hdi 
 ```
 
-Our median estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50. But how does the 95% HDPI far at representing the posterior in a principled manner? Here, I've visualized the interval for you, with the 95% confidence region shaded in blue:
+Our median estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50. But how does the 95% HDPI fare at representing the posterior in a principled manner? Here, I've visualized the interval for you, with the 95% confidence region shaded in blue:
 
 ![hdpi](https://github.com/jed709/jed709.github.io/assets/87210399/b849d620-f71b-4407-b229-cec9356e0c65)
 
