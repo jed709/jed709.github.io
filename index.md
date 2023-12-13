@@ -16,6 +16,8 @@ library(brms)
 library(tidybayes)
 ```
 
+Make sure to install these and load them prior to starting the tutorial!
+
 This guide is intended to be practical and to show you that you - yes, you - can estimate parameters using Bayesian methods. I will briefly cover theoretical concepts where necessary, but my approach throughout this guide will be largely hands-on, as my hope is that you will be able to transfer skills that you learn here to your own research. For this tutorial, I will assume that readers have some baseline knowledge of a number of core concepts. If you are totally unfamiliar with any of the concepts listed below, I have linked free online tutorial resources that you may find helpful as an introduction to these concepts:
 
 [Bayesian reasoning and inference](https://www.lesswrong.com/posts/CMt3ijXYuCynhPWXa/bayes-theorem-illustrated-my-way) and [model comparison using Bayes Factors](https://www.aarondefazio.com/tangentially/?p=90)
@@ -198,7 +200,17 @@ Hopefully this gives you a general idea of what's going on with respect to param
 Part II: Parameter estimation using _BayesFactor_
 ---
 
-Model comparison approaches using Bayes Factors have their place, but they are suited to different kinds of questions compared to the questions you might use parameter estimation for. For example, a good question to answer with Bayes Factors could be something like "Is there a difference between conditions/groups?" Let's try and answer this question as it pertains to the built-in `sleep` dataset.     
+You should be familiar with model comparison using Bayes Factors - there is a resource linked at the top of this blog post, if not. Model comparison approaches using Bayes Factors certainly have their place, but they are suited to different kinds of questions compared to the questions you might use parameter estimation answer. For example, a good question to answer with model comparison could be something like this: 
+
+"Is there a difference between conditions/groups?" 
+
+Let's try and answer this question as it pertains to the built-in `sleep` dataset. If you're unfamiliar with this dataset, I recommend taking a look at the documentation for it. You can do that like this:
+
+```R
+?sleep
+```
+
+Any time you're working with built-in datasets, this is good to check. In the case of this dataset, for example, the documentation tells us that it is paired, despite the fact that we have a grouping variable named `group`. Good luck figuring that one out on your own! Now, onto answering our question.
 
 First, we assign the built-in dataset to a variable so we can modify it and recover the original if necesssary:
 
@@ -206,7 +218,7 @@ First, we assign the built-in dataset to a variable so we can modify it and reco
 d <- sleep
 ```
 
-Next, let's conduct a Bayes Factor t-test using the `ttestBF` function from the `BayesFactor` package. For this example, we'll compare the extra hours of sleep that each condition receieved. Note that this paired data, despite the fact that the grouping variable is named `group`.
+Next, let's conduct a Bayes Factor t-test using the `ttestBF` function from the `BayesFactor` package. For this example, we'll compare the extra hours of sleep that each condition receieved.
 
 ```R
 ttestBF(d[d$group == 1,]$extra,
@@ -228,7 +240,13 @@ Against denominator:
 Bayes factor type: BFoneSample, JZS
 ```
 
-According to our trusty rules of thumb, the evidence here is pretty solid: A difference between groups is favored over a null model by a factor of about 17. Simple and intuitive. But what if we had a slightly more nuanced question about the data - perhaps something like "_what_ is the difference between conditions?" We could do this using parameter estimation. To do so, we'll first have to create a posterior distribution we can work with. For simple designs, this is possible with the `BayesFactor` package. Here's how:
+According to our trusty rules of thumb, the evidence here is pretty solid: A difference between groups is favored over a null model by a factor of about 17. Simple and intuitive. But what if we had a slightly more nuanced question about the data - perhaps something like this:
+
+"_What_ is the difference between conditions?" 
+
+We could answer this using parameter estimation. To do so, we'll have to create a posterior distribution we can work with, i.e., estimating the parameter corresponding to the difference between conditions. For a simple design, like this, it's possible to estimate parameters with the `BayesFactor` package. To start off slow, let's stick with this package for now. 
+
+To estimate this parameter, all we have to do is specify our call to `ttestBF` a little bit differently. Here's the code:
 
 ```R
 set.seed(999)
@@ -241,7 +259,9 @@ sleep.post <- ttestBF(d[d$group == 1,]$extra,
                      data = d)
 ```
 
-What did we do here? Let's break it down. Essentially, we conducted the same test as before. Under the hood, the `ttestBF` function is using a posterior distribution to come up with the Bayes Factor you see. This time, we told the function to draw _samples_ from this distribution - 10000 of them, to be precise - in order to create a posterior distribution that we can work with. This happens iteratively, using a random sampling algorithm that is far too complex to discuss here. Because this process is random, I included a call to `set.seed()` to ensure your answers would match mine here. If you exclude this function, you will get slightly different answers. However, because we are taking a lot of samples from the posterior, our answers will be pretty close. In order to reduce this sort of simulation error, you should always be working with a large number of posterior samples to draw trustworthy conclusions from the data. 
+What did we do here? Let's break it down. Essentially, we conducted the same test as before. Under the hood, the `ttestBF` function is using a posterior distribution to come up with the Bayes Factor you see. This time, we told the function to draw _samples_ from this distribution - 10000 of them, to be precise - in order to create a posterior distribution that we can work with. Why do we do this? Resources like [this one](https://xcelab.net/rm/statistical-rethinking/) can explain far better than I, but the gist of it is this: For any somewhat complex model (i.e., the types of models you encounter when dealing with real data), it becomes impossible to solve Bayes' Theorem in a closed-form manner. As a solution to this, we can _approximate_ the posterior distribution, rather than solving for it, by drawing samples. This happens iteratively, using a random sampling algorithm that is far too complex to discuss here (if you're interested in learning more, you could check out [this blog post](https://twiecki.io/blog/2015/11/10/mcmc-sampling/). For the purposes of this tutorial, we'll leave it at that.  
+
+Because this sampling process is random, I included a call to `set.seed()` in the code above to ensure your answers would match mine here. If you exclude this function, you will get slightly different answers. However, because we are taking a lot of samples from the posterior, our approximations of the posterior - and thereby our answers - should be pretty close. In order to reduce this sort of simulation error, you should always be working with a large number of posterior samples to draw trustworthy conclusions from the data: The more samples you have, the better the representation of the distribution should be. 
 
 With that in mind, we've successfully generated and saved a posterior distribution in the `sleep.post` variable. Let's take a look at it:
 
@@ -281,9 +301,9 @@ You'll get a figure that looks something like this:
 
 ![ graph ](assets/images/sleep-dens.png)
 
-Pretty neat, but what does this distribution tell us? 
+Pretty neat! This is our approximation of the posterior distribution for the unstandardized difference between conditions, based on 10000 samples. Thus, we've successfully estimated another parameter. But what does this parameter tell us? How can we use it to answer our original question, i.e., what is the difference between conditions?
 
-Essentially, it tells us how our beliefs about `mu` are distributed: Much like our marble example, the higher the density of a given value, the higher the posterior probability of that value. As we can see, it appears that our posterior density is highest for values of around 1.5 or so, meaning values in this region are the most probable. This should be reflected if we calculate descriptive statistics for `mu`:
+Essentially, it tells us how our beliefs about our parameter, `mu`, are distributed: Much like our marble example, the higher the density of a given value, the higher the posterior probability of that value. As we can see, it appears that our posterior density is highest for values of around -1.5 or so, meaning values in this region are the most probable. This should be reflected if we calculate descriptive statistics for `mu`:
 
 ```R
 mean(sleep.post[,'mu'])
@@ -299,15 +319,19 @@ Output:
 [1] -1.415092
 ```
 
-That checks out, then: It seems that the most likely values for mu are around -1.4. That gives us an answer for our original question: The difference between conditions is around -1.4.
+That checks out, then: It seems that the most likely values for mu are around -1.4. That gives us some sort of an answer for our original question: The difference between conditions is around -1.4.
 
 But why leave it at that? One of the main advantages of estimating parameters is that your posterior quantifies your _distribution_ of beliefs about the data. Accordingly, a single estimate for `mu` does not necessarily represent this distribution adequately. Looking at our figure, we can see our posterior includes values ranging from below -4 to upwards of 1. That's a lot of uncertainty about the value of `mu`! A mean or median estimate would largely ignore all this, which we want to avoid doing. 
 
-Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - and therefore probability - is quite low. But what about values around -2, or around -0.5? The probability of these values is still fairly high, and a single estimate derived from the posterior doesn't really capture this. Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we deal with the full range of values in the posterior, we might overemphasize extreme values that are very unlikely. Thus also wouldn't be a good representation of our beliefs, because we don't have much faith in values near -4 or 1.5. We need a compromise. What's the solution?
+Of course, not all of these extreme values are meaningful. If we look at the tail ends of the distribution, we can see that posterior density - and therefore probability - is quite low. We don't really consider these to be particularly likely values for `mu`, so we shouldn't emphasize them too strongly. But what about values around -2, or around -0.5? The probability of these values is still fairly high, and a single estimate derived from the posterior doesn't really capture this.
 
-One common approach is to compute a _Credible Interval_, which essentially trims the most extreme values off of the posterior distribution. This will provide a more complete representation of the posterior than a single estimate, but it also won't emphasize extremely improbable values that exist on either end of the range. It will also allow us to make inferences from the posterior, as I will explain below. There are several possible approaches we could take to compute such an interval, but I'll focus on the Highest Posterior Density Interval (HPDI), which contains the highest density of posterior probability for a given confidence level. For example, the HDPI for a confidence level of 95% would take 95% of the posterior probability where the parameter is most dense. 
+Thus, computing a single estimate for `mu` means that we end up ignoring a lot of uncertainty and some fairly probable values. However, if we deal with the full range of values in the posterior, we might overemphasize extreme values that are very unlikely. Thus also wouldn't be a good representation of our beliefs, because we don't have much faith in values near -4 or 1.5. We need a compromise. What's the solution?
 
-The confidence level is entirely arbitrary. Although 95% is a common cutoff, there is no reason this cutoff must be used. We could use 99%, 50%, 89% (as McElreath likes to do), or any other value that we believe is justified. To keep things simple and straightforward (and because 95% confidence is the default for the `tidybayes` functions we're working with), I'll stick with 95%. Just keep in mind that you don't have to.
+One common approach is to compute a _Credible Interval_ (CI), which essentially trims off a portion of the posterior probability corresponding to a given confidence level. For example, a CI with a confidence level of 95% would retain 95% of the posterior probability, whereas a confidence level of 80% would retain 80% of the probability. Simple enough. 
+
+Computing such an interval will provide a more complete representation of the posterior than a single estimate, so long as we choose a sensible region within the posterior to retain, but it also won't emphasize extremely improbable values that exist on either end of the range. Importantly, it will also allow us to make inferences from the posterior, as I will explain later. There are several possible approaches we could take to compute such an interval, but I'll focus on the Highest Posterior Density Interval (HPDI), which contains the highest _density_ region of posterior probability for a given confidence level. For example, the HDPI for a confidence level of 95% would take 95% of the posterior probability where the probability is most dense. In any semi-normal distribution, this should capture the most likely values of the parameter. 
+
+As a side note, the confidence level is entirely arbitrary. Although 95% is a common cutoff, there is no reason this cutoff must be used. We could use 99%, 50%, 89% (because it's a prime number), or any other value that we believe is justified. To keep things simple and straightforward (and because 95% confidence is the default for the `tidybayes` functions we're working with), I'll stick with 95%. Just keep in mind that you don't have to.
 
 With that in mind, let's go back into _R_ and do something concrete. Now that we know what the HDPI is, let's compute this interval for `mu` using the `tidybayes` package:
 
@@ -326,15 +350,17 @@ Output:
 1 -1.42  -2.29 -0.501   0.95 median hdi 
 ```
 
-Our median estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50. Let's visualize the HDPI, with the 95% confidence region shaded in blue:
+Our median estimate for `mu` has not changed much. However, we've also computed lower and upper bounds for the HDPI: -2.29 to -0.50. But how does the 95% HDPI far at representing the posterior in a principled manner? Here, I've visualized the interval for you, with the 95% confidence region shaded in blue:
 
 ![hdpi](https://github.com/jed709/jed709.github.io/assets/87210399/b849d620-f71b-4407-b229-cec9356e0c65)
 
-As we can see, the HDPI cuts off all the extreme values that don't fall within our arbitrary confidence region. Thus, this interval provides a pretty good representation of the values in our posterior that we deem credible. 
+As we can see, the HDPI cuts off all the extreme values that don't fall within our arbitrary confidence region. Thus, this interval provides a pretty good representation of the values in our posterior that we are willing to deem credible. The representation is pretty good. We've cut off ridiculously extreme values, but we've also retained quite a bit of uncertainty. This should fare much better than a measure of central tendency or the full range of the parameter. 
 
-Now that we have a Credible Interval, making inferences about the parameter is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. Because our Credible Interval does not contain zero, we can say that the effect of condition on sleep is _credible_. This is similar to how people make inferences from frequentist confidence intervals, with one key difference: This interpretation of Bayesian intervals is actually _correct_. So, it's pretty intuitive and probably fairly in tune with how you think about confidence intervals anyway. 
+Now that we have a Credible Interval, making inferences about our parameter (`mu`) is easy: 95% of values in our HDPI are below zero, so we are 95% confident that `mu` is negative. To phrase this in terms of the dataset we are working with, we are 95% certain the the difference between condition 1 and condition 2 falls between -2.29 and -0.50. Because our Credible Interval does not contain zero, we can say that the effect of condition on sleep is _credible_; because we are dealing with 95% of the posterior probability, we are 95% sure that the true estimate lies within the region we selected. 
 
-Let's return to the Bayes Factor we computed earlier. The inferences we derived from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the Bayes Factor did not provide a complete picture of the effect. With parameter estimation, then, we can accomplish things that Bayes Factors cannot. Rather just a ratio of evidence, we were able to quantify the size of the effect - alongside uncertainty - and provide a range of plausible values for our parameter of interest. 
+This is intuitive to think about, and it is similar to how people tend to make inferences from frequentist confidence intervals, with one key difference: This interpretation of Bayesian credible intervals is actually _correct_. On the other hand, frequentist CIs tell you that if repeated the experiment many times using random samples drawn from the same target population, those experiments would produce confidence intervals that contain the true estimate 95% of the time (or whatever other confidence level you might be working with). So, the Bayesian interpretation is pretty intuitive and probably fairly in tune with how you think about confidence intervals anyway. If you work with Bayesian models, you can interpret CIs like this all the time!
+
+Now that we've estimated a parameter for `mu`, let's briefly return to the Bayes Factor we computed earlier. The inferences we derived from the Bayes Factor and parameter estimation are the same, in that we have good reason to believe there is a difference between conditions. However, the Bayes Factor did not provide a complete picture of the uncertainty surrounding the effect, and it did not _quantify_ the effect. With parameter estimation, then, we can accomplish things that Bayes Factors cannot. Rather just a ratio of evidence, we were able to quantify the size of the effect - alongside uncertainty - and provide a range of plausible values for our parameter of interest. 
 
 But we can only do so much with the `BayesFactor` package. What if we had a more complicated design? Further, what if we wanted to incorporate prior knowledge into our models? With the `BayesFactor` package, the latter is possible, but options for specifying priors are limited. To address these problems, we must turn to the `brms` package. 
 
@@ -343,15 +369,23 @@ Part III: The Basics of Estimating Parameters Using _brms_
 ---
 
 Although we will work with a more complex design in this section, the basics we learned about working with the posterior still apply here. For our
-purposes, let's work with the `ToothGrowth` dataset.
+purposes, let's work with the `ToothGrowth` dataset. Remember, if you don't know the dataset, you better check the help documentation first!
+
+```R
+?ToothGrowth
+```
+
+We can see that this dataset reflects an experiment wherein the dependent measure the length of odontoblasts (`len`) in guinea pigs. This doesn't feel intuitive, so we'll just pretend this is tooth length. The guinea pigs were administered vitamin C using one of two methods, either ascorbic acid (`VC`) or orange juice (`OJ`). Each guinea pig received vitamin C at one of three possible levels of `dose`, `0.5`, `1.0`, or `2.0`. Thus, the design of the experiment is 2 x 3, with both fixed effects manipulated between-subject; this is perfect for our purposes, because multilevel modelling is beyond the scope of this tutorial. 
+
+Once you've read all that over and understand the design, we can get started. First, we'll assign the `ToothGrowth` dataset to a variable. 
 
 ```R
 nd <- ToothGrowth
 ```
 
-This dataset reflects an experiment wherein the dependent measure the length of odontoblasts (`len`) in guinea pigs. This doesn't feel intuitive, so we'll just pretend this is tooth length. The guinea pigs were administered vitamin C using one of two methods, either ascorbic acid (`VC`) or orange juice (`OJ`). Each guinea pig received vitamin C at one of three possible levels of `dose`, `0.5`, `1.0`, or `2.0`. Thus, the design of the experiment is 2 x 3, with both fixed effects manipulated between-subject; this is perfect for our purposes, because multilevel modelling is beyond the scope of this tutorial. 
+So, how would we model this experiment? We can think about it in a pretty similar manner to how we would think about an ANOVA: We have two fixed effects we are interested in, and we are also probably interested in the interaction between them. `brms` uses the same formula syntax as the `lme4` package and most _R_ functions that can be used to fit linear models (e.g., `lm()`). I am assuming that you are familiar with linear regression (a tutorial is linked above, if not), so hopefully none of this sounds too wacky. 
 
-So, how would we model this experiment? We can think about it in a pretty similar manner to how we would think about an ANOVA: We have two fixed effects we are interested in, and we are also probably interested in the interaction between them. `brms` uses the same formula syntax as the `lme4` package and most _R_ functions that can be used to fit linear models (e.g., `lm()`). So, it is fairly easy to translate our design into a linear formula, like so:
+With this in mind, it is fairly easy to translate our design into a linear formula, like so:
 
 ```R
 len ~ supp * dose
