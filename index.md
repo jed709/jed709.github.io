@@ -4,9 +4,11 @@ layout: home
 ---
 
 ===============
-Practical Introduction to Bayesian Parameter Estimation
+Practical Introduction to Bayesian Parameter Estimation: A Tutorial for NeuroFrogs
 ===============
-
+---
+by Jedidiah Whitridge
+---
 This tutorial uses the following _R_ packages:
 
 ```R
@@ -385,14 +387,14 @@ nd <- ToothGrowth
 
 So, how would we model this experiment? We can think about it in a pretty similar manner to how we would think about an ANOVA: We have two fixed effects we are interested in, and we are also probably interested in the interaction between them. `brms` uses the same formula syntax as the `lme4` package and most _R_ functions that can be used to fit linear models (e.g., `lm()`). I am assuming that you are familiar with linear regression (a tutorial is linked above, if not), so hopefully none of this sounds too wacky. 
 
-With this in mind, it is fairly easy to translate our design into a linear formula, like so:
+With this in mind, it is fairly easy to translate our design into a formula, like so:
 
 ```R
 len ~ supp * dose
 ```
 
 Passed to `brms`, this syntax will model the effect of each predictor (and their interaction) on `len`. Before we do that, however, we should prepare our dataset:
-We want dose to be a categorical predictor, so we should convert it into a factor like so:
+We want dose to be a categorical predictor, not continuous and numeric, so we should convert it into a factor like so:
 
 ```R
 nd = nd %>%
@@ -408,9 +410,17 @@ m.1 <- brm(len~supp*dose,
            cores = 4)
 ```
 
-Simple as that! This might take a minute to compile and run.
+Simple as that! This might take a minute to compile and run. In your case, you can specify the `chains` and `cores` arguments differently, if you know how many cores your computer has. `chains` refers to the sampling chains you are running, with the assumption that you have an independent computer core available to run each chain independently. The nitty gritty of `brms` is beyond the scope of this tutorial, so if you're just getting started and are curious, you chould check out [this article](https://www.jstatsoft.org/article/view/v080i01).
+
+If you're content moving along with me, we've now successfully fit a regression model using `brms`. 
 
 Now let's call the summary function on the output:
+
+```R
+summary(m.1)
+```
+
+Output:
 
 ```R
  Family: gaussian 
@@ -438,11 +448,11 @@ and Tail_ESS are effective sample size measures, and Rhat is the potential
 scale reduction factor on split chains (at convergence, Rhat = 1).
 ```
 
-There's a lot of output there, but it is very similar to the output you would get from a typical linear model. Let's start with the population-level effects. Because our predictors are categorical,
-the model intercept represents tooth length at our reference level, which is `supp = OJ` and `dose = 0.5`. The model slopes represent changes in tooth length
-for other levels of our predictors _relative to our reference level_. So, a coefficient of 9.49 for `dose1` means that at levels of `dose = 1` and `supp = VC`, tooth length increased by an average of 9.49 relative to the reference level. See? Simple enough. We also get 95% Credible Intervals for each coefficient. Given that none of these intervals contain 0, it appears that our intercept and all of our slopes are credible. Finally, the model also gives us R-hat statistics and effective sample sizes for each estimate. These are indices of model convergence, which we will not worry about in this tutorial. 
+There's a lot of output there, but it is very similar to the output you would get from a typical linear model. Let's start with the population-level effects. Because our predictors are categorical, the model intercept represents tooth length at our reference level, which is `supp = OJ` and `dose = 0.5`. The model slopes represent changes in tooth length for other levels of our predictors _relative to our reference level_. So, a coefficient of 9.49 for `dose1` means that at levels of `dose = 1` and `supp = VC`, tooth length increased by an average of 9.49 relative to the reference level. See? Simple enough. We also get 95% Credible Intervals for each coefficient. Given that none of these intervals contain 0, it appears that our intercept and all of our slopes are credible. 
 
-We can also directly access the full posterior for any model term. This can be accomplished using the `as_draws_df` function from the `brms` package. Let's try that and see what we get:
+We also get plenty of other things. The above resource on `brms` that I linked covers these in detail, and we will largely leave everything besides our estimates alone in this tutorial. But, if you're just slightly curious, the `sigma` parameter represents the model's residual standard deviation. The model also gives us R-hat statistics and effective sample sizes for each parameter; these are indices of model convergence, which we will not worry about in this tutorial. 
+
+The truly powerful thing about fitting models like this is that we can directly access the full posterior for any model term very easily. This can be accomplished using the `as_draws_df` function from the `brms` package. Let's try that and see what we get (there's a lot of rows, so we'll just glimpse it using `head()`:
 
 ```R
 m.1 %>%
@@ -465,7 +475,7 @@ Output:
 # ... hidden reserved variables {'.chain', '.iteration', '.draw'}
 ```
 
-All of our model coefficients here. The values in this dataframe represent draws or samples from the posterior for each coefficient. This is pretty similar to what we did using `ttestBF`, except we have done it for a much more complex model. As an aside, we can see in our output from `as_draws_df` that `brms` uses weird naming conventions for model coefficients. If you're not familiar with these conventions, and if you don't want to generate a dataframe every time you need to know what the name of a model term is, the `get_variables` function from the `tidybayes` package is very handy:
+All of our model coefficients are here. The values in this dataframe represent samples (or _draws_) from the posterior for each coefficient. This is pretty similar to what we did using `ttestBF`, except now we have done it for a much more complex model. As an aside, we can see in our output from `as_draws_df` that `brms` uses weird naming conventions for model coefficients. If you're not familiar with these conventions, and if you don't want to generate a dataframe every time you need to know what the name of a model term is, the `get_variables` function from the `tidybayes` package is very handy:
 
 ```R
 get_variables(m.1)
@@ -481,7 +491,7 @@ Output:
 
 Easy!
 
-Now, to get comfortable working with posteriors from complex models, let's look at the posterior for the `supp = OJ` and `dose = 0.5` condition (i.e., our intercept). Remember, to access the posterior for this condition, we will need to use the model intercept, i.e., the `b_Intercept` term. Let's glimpse at the posterior distribution for the intercept:
+Now, to get comfortable working with posteriors from complex models, let's start by trying to calculate some condition means. Although we have a reference level and change scores, we can still derive these quite easily using the posterior. Let's start off simple, by calculating the condition mean for our reference level. In our model, this corresponds to the `supp = OJ` and `dose = 0.5` condition (i.e., our intercept). Remember, to access the posterior for this condition, we will need to use the model intercept, i.e., the `b_Intercept` term. Let's glimpse at the posterior distribution for the intercept by visualizing it:
 
 ```R
 m.1 %>%
@@ -495,7 +505,9 @@ Output:
 
 ![intercept-post](https://github.com/jed709/jed709.github.io/assets/87210399/6e6769f0-1f50-481e-bbf0-95caa70eb894)
 
-This is a similar exercise to what we did with our posterior from the sleep dataset. As we can see, the most probable values are around 13 or so, which matches up well with the model output. We can also use `as_draws_df` in conjunction with `median_hdi` from `tidybayes` to calculate a credible interval for any posterior distribution derived from our model:
+This is a similar exercise to what we did with our posterior from the sleep dataset, but it's a bit more flexible. As you can see, it's quite simple to calculate a posterior distribution correspond to any given parameter contained within your model! This can be very powerful, as I will demonstrate later.
+
+But for now, what do we know about this parameter (the condition mean) that we are interested in? As we can see, the most probable values of the parameter are around 13 or so, which matches up well with the model output. We can also use `as_draws_df` in conjunction with `median_hdi` from `tidybayes` to calculate a credible interval for any posterior distribution derived from our model:
 
 ```R
 m.1 %>%
@@ -512,7 +524,26 @@ Output:
 1        13.2   11.1   15.6   0.95 median hdi 
 ```
 
-This might not seem that exciting, because our `brms` output already gave us a Credible Interval for this term, and it is quite similar to the HDI. However, something more exciting is that we can use this general method to conduct any number of arbitrary comparisons and evaluate whether or not they are meaningful. For example, what if we wanted to check whether tooth length in the `VC` condition was higher for `dose = 2` relative to `dose = 1`? This is very easy to do with `as_draws_df`. Here's a demonstration: 
+This might not seem that exciting, because our `brms` output already gave us a Credible Interval for this term, and it is quite similar to the HDI. However, something slightly more exciting might be to generate an estimate for a condition that was not explicitly presented in our output. For example, let's do this for the `supp = OJ` and `dose = 2` condition. All we have to do to access this posterior is sum up model terms. Because our slopes reflect differences relative to the intercept, we can just add the intercept to the other relevant parameter:
+
+```R
+m.1 %>%
+  as_draws_df() %>%
+  median_hdi(b_Intercept + b_dose2)
+```
+
+Output:
+
+```R
+# A tibble: 1 × 6
+  `b_Intercept + b_dose2` .lower .upper .width .point .interval
+                    <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+1                    26.1   23.8   28.4   0.95 median hdi 
+```
+
+And there's our estimate for the `supp = OJ` and `dose = 2` condition! It wasn't in our output, but we can still access it. Pretty intuitive, right? You could access any condition mean this way, very easily. 
+
+Now, something that is perhaps even more exciting is that we can use this general method to conduct any number of arbitrary comparisons between parameters within our model. For example, what if we wanted to check whether tooth length in the `VC` condition was higher for `dose = 2` relative to `dose = 1`? This is very easy to do with `as_draws_df`. Here's a demonstration: 
 
 ```R
 m.1 %>%
@@ -539,9 +570,15 @@ Output:
 1     3.34  0.135   6.56   0.95 median hdi  
 ```
 
-As we can see, our median posterior estimate is 3.34, with the HDI ranging from 0.14 to 6.56. In other words, tooth length was credibly higher for the `supp = OJ` and `dose = 2` condition relative to the `dose = 1` condition for the same method of delivery. This is what I find most intutitive about working with Bayesian models. When it comes to contrasts, the world is your oyster. You can generate a contrast for any relationship you are interested in - no need for special statistical tests to evaluate pairwise comparisons. 
+As we can see, our median estimate is 3.34, with the HDI ranging from 0.14 to 6.56. In other words, tooth length was credibly higher for the `supp = OJ` and `dose = 2` condition relative to the `dose = 1` condition for the same method of delivery. This is what I find most intutitive about working with Bayesian models. When it comes to contrasts, the world is your oyster. You can generate a contrast for any relationship you are interested in - no need for special statistical tests to evaluate pairwise comparisons. 
 
-The contrasts and condition means you compute can also be translated into informative visualizations. For example, what if we were interested in depicting the contrast between high and medium doses (`dose2` - `dose1`) and the contrast between high and low doses (`dose2` - `dose0.5`). We can make a pretty cool plot out of this using the `stat_halfeye` function from `tidybayes`. This function is imported from the `ggdist` package, which you'll want to install if you'll be doing a lot of this sort of visualization. For our purposes, however, the function `tidybayes` has will suffice. Here's how we could plot these two contrasts together:
+If you're curious what's actually going on under the hood here, what we're doing is creating a whole distribution of posterior samples - uncertainty and all - corresponding to the _difference_ between parameters that we're interested in. We can see that, and visualize it if we would like, so it is a little bit more accessible:
+
+![contrastfig1](https://github.com/jed709/jed709.github.io/assets/87210399/24d75419-deb1-4898-af96-d2978acf29cf)
+
+So, this posterior distribution corresponds to to the difference between the posterior for `supp = OJ` and `dose = 2` and the posterior for `supp = OJ` and `dose = 1`. Once we calculate this distribution, all we do is calculate a credible interval from it, and then we can make inferences. Very simple and very powerful - no need to think about Tukey tests, Bonferroni corrected _p_-values and the like. 
+
+If we wanted to take this a step further, we could translate our contrasts and condition means into informative visualizations. For example, what if we were interested in depicting the contrast between high and medium doses for the `OJ` group (`dose2` - `dose1`, calculated above) and the contrast between high and low doses for the same group (`dose2` - `dose0.5`). We can make a pretty cool plot out of this using the `stat_halfeye` function from `tidybayes`. This function is imported from the `ggdist` package, which you'll want to install if you'll be doing a lot of this sort of visualization. For our purposes, however, the functions `tidybayes` has will suffice. Here's how we could visualize these two contrasts together:
 
 ```R
 m.1 %>%
@@ -568,7 +605,7 @@ Output:
 
 Cool plot, right? It contains a lot of information. The point is your median posterior estimate. The thick line surrounding the point is the 50% HDI, and the thin line is the 95% HDI. On top of the interval, we get a visualization of the entire posterior distribution of the estimate. These contrasts might not be the most interesting to visualize, but it's a simple proof-of-concept that you can build off. 
 
-Now that we understand the basics of fitting models with `brms` and working with the posteriors they generate, let's go through a more complex - but more practical - example, using the same dataset.
+Now that we understand the basics of fitting models with `brms` and working with the posteriors they generate, let's finally go through a more complex - but more practical - example, using the same dataset.
 
 ---
 Part IV: A Practical Example
@@ -602,9 +639,11 @@ I've added tails so the "curve" is visible. The values on each axis aren't impor
 
 It is good not to use priors that are _too_ informative; this could tip the scale one way or the other, which we want to avoid. In practice, however, there is no reason that priors need to be _so_ uninformative as to afford equal probablity to all possible values. What reasonable constraints might we apply to the data?
 
-In this example, our dependent variable is tooth length. The default prior used by `brms` will consider values below zero to be just as likely as values above zero. This makes no sense. A guinea pig could have a tooth length of zero, hypothetically, but lower values are not possible: Guinea pigs cannot have negative teeth. Accordingly, it would be very reasonable of us to tell the model not to consider values below zero. Similarly, the fact that we are working with guinea pigs tells us that we can place some reasonable constraints on how long their teeth can be. Guinea pigs are quite small, so their teeth are not going to be comparable in size to the tusks of an elephant. Using flat priors, we are essentially saying that tusk-sized teeth are just as likely as something more reasonable. 
+In this example, our dependent variable is tooth length. The default prior used by `brms` will consider values below zero to be just as likely as values above zero. This makes no sense. A guinea pig could have a tooth length of zero, hypothetically, but lower values are not possible: Guinea pigs cannot have negative teeth. Accordingly, it would be very reasonable of us to tell the model not to consider values below zero. Similarly, the fact that we are working with guinea pigs tells us that we can place some reasonable constraints on how long their teeth can be. Guinea pigs are quite small, so their teeth are not going to be comparable in size to the tusks of an elephant. Using flat priors, we are essentially saying that tusk-sized teeth are just as likely as something more reasonable. We are also saying that negative teeth are just as likely as teeth. That doesn't make any sense.
 
-With that in mind, let's fit a better model that incorporates some reasonable prior knowledge. Before we do that, however, let's modify the parameterization of the model so we can more easily specify priors for each condition. Because we are using categorical predictors, we can remove the model intercept and compute slopes that estimate the mean in each condition. Using this approach, our reference level will still be modelled, and the output will be much more intutive to interpret. Rather than thinking about the slopes as differences between conditions, we will instead simply get an estimate for each cell. This will also make contrasts easier to compute. We can remove the model intercept using the same syntax we would use in `lme4`. Here's the formula we'll use:
+With that in mind, let's fit a better model that incorporates some reasonable prior knowledge. Before we do that, however, let's modify the parameterization of the model so we can more easily specify priors for each condition. 
+
+Because we are using categorical predictors, we can remove the model intercept and compute slopes that estimate the mean in each condition. Using this approach, our reference level will still be modelled, and the output will be much more intutive to interpret. Rather than thinking about the slopes as differences between conditions, we will instead simply get an estimate for each cell. This will also make contrasts easier to compute. We can remove the model intercept using the same syntax we would use in `lme4`. Here's the formula we'll use:
 
 ```R
 len~supp:dose-1
@@ -631,14 +670,22 @@ Output:
  student_t(3, 0, 9) sigma                                       0         default
 ```
 
-Now we can see all the terms in our model. As we can see, we'll compute a slope corresponding to tooth length for every possible combination of our fixed effects. Pretty intuitive, right? This also means we don't have to specify priors on our slopes with respect to the _difference_ we expect relative to the reference level. Instead, we can specify priors that reflect our belief about what tooth length should be in each condition. 
+Now we can see all the terms in our model. As we can see, we'll compute a slope corresponding to tooth length for every possible combination of our fixed effects. Pretty intuitive, right? This also means we don't have to specify priors on our slopes with respect to the _difference_ we expect relative to the reference level. Instead, we can specify priors that reflect our belief about what tooth length should be in each condition. This is way easier and more intuitive.
 
 Now, with this parameterization, we could give the model a specific prior for each condition. However, we do want to avoid tipping the scale, so we'll keep our priors pretty general and mostly uninformative. There are two pieces of prior knowledge we want to incorporate here:
 
 1. Tooth length cannot be negative
 2. Guinea pig teeth won't be particularly long
 
-To do this, we'll have to come up with a belief about guinea pig tooth length. I'm no expert, but you can pretend I researched this and came up with the principled hypothesis that tooth length in any condition should fall between 0 and 16, with a mean of 8. In practice, your priors should be calibrated to principled beliefs. We're also going to set a hard lower bound on tooth length in all conditions so the model doesn't afford probability to values below zero. In `brms`-speak, all of that would look like this:
+To do this, we'll have to come up with a belief about guinea pig tooth length. I'm no expert, but you can pretend I researched this and came up with the principled hypothesis that tooth length in any condition should fall between 0 and 16, with a mean of 8. Much like what we did in the first example, we're mapping out a prior _distribution_ of beliefs. In practice, your priors should be calibrated to principled beliefs. However, I am, unfortunately, not an expert on tooth length in guinea pigs, so what can you do? 
+
+We can specify our prior beliefs as a normal distribution with a mean of 8 and a standard deviation of 4. To keep with the theme of keeping things concrete, I've visualized our prior distribution for us. Here's how it would look, with our plausible range of values shaded in red:
+
+![github-priorplot-1](https://github.com/jed709/jed709.github.io/assets/87210399/54af37a0-5b22-41ff-a5c7-b1c90e9f05a5)
+
+Simple enough to think about, right? The red region is where we're saying we expect average tooth length to fall in any given condition. The tails on either side show that we're allocating some probability to more extreme values, but definitely less than what we're allocating to our plausible range of values. This is a fairly reasonable prior. It's not particular _informative_, in that we're keeping the range of plausible values pretty wide and not allocating _too_ much probability to a narrow range of values. This priors aren't _actually_ principled, because I know nothing about the dependent variable we're working with, but they at least should semi-resemble priors that are. 
+
+We're also going to set a hard lower bound on tooth length in all conditions so the model doesn't afford probability to values below zero, but we can do that in our call to the `brm` function. In `brms`-speak, our priors would look like this:
 
 ```R
 prior(normal(8, 4), class = 'b', lb = 0)
@@ -650,9 +697,9 @@ This sets a normal prior - with a mean of 8 and a standard deviation of 4 - on a
 prior(normal(8, 4), coef = 'suppOJ:dose2')
 ```
 
-But you would only want to do that if you had good reason to do so. We won't do that today.
+But you would only want to do that if you had good reason to do so. We don't, so we won't do that today.
 
-Another thing we won't get into is addressing the priors for sigma. By default, `brms` uses a half-Cauchy prior, which is a Cauchy distribution truncated at zero. Sigma cannot be negative, so this is good. Half-Cauchy priors are uninformative and are recommended for sigma (e.g., Gelman, 2006). We don't have any principled reason to mess with this prior in this tutorial, so we'll leave it as is.
+Another thing we won't get into is addressing the priors for sigma. By default, `brms` uses a half-Cauchy prior, which is a Cauchy distribution truncated at zero. Sigma cannot be negative, so this is good. Half-Cauchy priors are uninformative and are often recommended for sigma. We don't have any principled reason to mess with this prior in this tutorial, so we'll leave it as is.
 
 Now that we've gone over all of that, let's fit a new model, minus the intercept and inclusive of our principled priors on the model slopes. Here's how we could do that:
 
@@ -692,7 +739,7 @@ and Tail_ESS are effective sample size measures, and Rhat is the potential
 scale reduction factor on split chains (at convergence, Rhat = 1).
 ```
 
-Nice - much easier to interpret than our previous model! You'll also notice that tooth length in our reference level is a bit lower than before. This is because our priors pulled it a little bit closer to zero. Once again, we get a 95% Credible Interval for each estimate, but in this case, these are less meaningful. All they tell us is that tooth length in each condition is credibly different from zero, which we would hope it should be (unless we had toothless guinea pigs). 
+Nice - much easier to interpret than our previous model! You'll also notice that tooth length in our reference level is a bit lower than before. This is because our priors pulled it a little bit closer to zero (i.e., _regularized it_). Once again, we get a 95% Credible Interval for each estimate, but in this case, these are less meaningful. All they tell us is that tooth length in each condition is credibly different from zero, which we would hope it should be (unless we had toothless guinea pigs). 
 
 But the real strengths of this model arise when we want to compute contrasts. The way we have paramterized the model makes this incredibly easy. For example, let's see if tooth length was greater in the `suppOJ:dose1` condition relative to the `suppVC:dose1` condition. Note that I wrap the column names in backticks. _R_ will interpret the `:` as an operator if you don't do this, so this is useful to know if you'll be working with models with crossed effects. Anyway, here's the code:
 
@@ -821,6 +868,67 @@ That will give you a plot like this:
 
 ![complex-model-con](https://github.com/jed709/jed709.github.io/assets/87210399/e36cfa10-9864-4a44-beab-0cc99a126764)
 
-Here, I added a line at 0 so it's easy to tell if a contrast is credible or not. If this was the comparison we were interest it, a plot like this would do a very good job communicating it. 
+Here, I added a line at 0 so it's easy to tell if a contrast is credible or not. If this was the comparison we were interest it, a plot like this would do a pretty good job communicating it. 
 
-Hopefully, this tutorial has conveyed that you can do a great deal with Bayesian parameter estimation. Unlike other approaches, you are not at all limited in the comparisons you can make. For even more complex designs, the general principles demonstrated here still apply. Hopefully you can transfer this knowledge to your own research - good luck!
+Now, as one FINAL exercise - for real, this time, I promise - let's demonstrate the importance of working with _principled_ priors. The priors we placed on our model were not particularly informative, and because of this, they did not have a drastic impact on our model output. However, what if we placed some stronger priors on the model? 
+
+Well, all we'd have to do to make the priors overly informative is to narrow our range of plausible values a bit. We could do this by changing the standard deviation of our prior distribution. Let's cut it in half - we'll say our prior is now a normal distribution with a mean of 8 and a standard deviation of 2. Plus or minus two standard deviations from the mean would give us a range of 4 to 12, which is now the range of plausible values we're willing to accept. You might think that our range hasn't narrowed **that** much, but it really has. Let's take a look at this visualization I made:
+
+![github-prior-comparison](https://github.com/jed709/jed709.github.io/assets/87210399/8bfa5214-8330-4e90-9fbd-4719a81bd181)
+
+In red, we have the reasonable priors we put on the previous model. In blue, we have the priors we're going to put on the absolute disaster of a model that we'll fit in a minute. As you can see, not only has our range of values tightened, but we're also allocating vastly more probability to values near the mean and vastly less to values away from the mean. This is an overly informative prior. It is going to bias our estimates. For an experiment like this, such a prior would almost never be appropriate. This is just a cautionary exercise. 
+
+So, to put the fear of bad statistics into you, let's fit the model again, using our slightly modified prior. Remember, we're fitting a near-indentical model, we're just altering the standard deviation of our prior distribution. Here's the code:
+
+```R
+m.3 <- brm(len~supp:dose-1,
+           prior = prior(normal(8, 2), class = 'b', lb = 0),
+           data = nd,
+           chains = 4,
+           cores = 4)
+```
+
+And we'll wait a minute for this mess to compile and run...
+
+```R
+summary(m.3)
+```
+
+Output:
+
+
+```R
+ Family: gaussian 
+  Links: mu = identity; sigma = identity 
+Formula: len ~ supp:dose - 1 
+   Data: nd (Number of observations: 60) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Population-Level Effects: 
+               Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+suppOJ:dose0.5     9.56      1.70     6.19    12.95 1.00     4637     2088
+suppVC:dose0.5     7.97      1.74     4.54    11.29 1.00     3781     1611
+suppOJ:dose1      12.40      1.82     8.77    15.95 1.00     3823     2694
+suppVC:dose1      10.64      1.74     7.22    13.95 1.00     4265     2494
+suppOJ:dose2      13.40      1.91     9.57    17.03 1.00     3501     2787
+suppVC:dose2      13.42      1.94     9.45    17.15 1.00     3946     3030
+
+Family Specific Parameters: 
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sigma     9.81      1.27     7.57    12.52 1.00     2682     2983
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+```
+
+Truly a disaster. Look at those estimates for the higher doses - they've shrunk by more than 10 points in whatever unit of measurement we're dealing with. The credible intervals for those parameters don't even overlap with the old model anymore. This is the influence that priors can have on models, and this is why you need to keep them principled (always) and uninformative (in most cases). Fitting a model like this for an actual experiment would lead us to draw totally different inferences relative to a reasonable model. The estimates we got are all very biased towards the priors. This is "putting our thumb on the scale," and we are not allowing the data to speak. Don't do this.
+
+Now, if we had a lot of data, the impact these priors have wouldn't be as disastrous. When we calculate the likelihood using larger samples, the posterior will not be as overwhlemed by the prior. One common misconception that's worth noting here is that having a lot of data has nothing to do with how many posterior samples you have. The amount of data you're working with impacts the likelihood, which will be used to calculate the posterior. So, if you fit a model without a lot of data, you can't mitigate the impact of your priors by drawing lots of samples - the posterior has already been "calculated," so to speak. That said, even if you do have a lot of data, you still shouldn't be using priors like this in the vast majority of cases. Keep them reasonable and mostly uninformative - hopefully this example illustrated why this is necessary. 
+
+---
+We're done!
+---
+
+I hope you enjoyed this post and that you were able to learn something about Bayesian approaches to parameter estimation. I tried to keep this focused on building skills that would be easy to apply when thinking about your own research. The possiblities of what you can do with parameter estimation extend far beyond the concepts covered here, so I hope that you will explore further if this interested you - good luck!
