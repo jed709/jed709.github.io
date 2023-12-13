@@ -11,6 +11,7 @@ Practical Introduction to Bayesian Parameter Estimation: A Tutorial for NeuroFro
 ---
 by Jedidiah Whitridge
 ---
+
 This tutorial uses the following _R_ packages:
 
 ```R
