@@ -4,7 +4,8 @@ layout: home
 ---
 
 ===============
-Practical Introduction to Bayesian Parameter Estimation: A Tutorial for NeuroFrogs
+Practical Introduction to Bayesian Parameter Estimation: 
+A Tutorial for NeuroFrogs
 ===============
 
 
@@ -45,7 +46,7 @@ With all that out of the way, let's get started.
 Part I: Why parameter estimation?
 ---
 
-Assuming you are at least slightly familiar with Bayesian inference, you are probably familiar with Bayes Factors. Bayes Factors are an intuitive and easily interpretable alternative to approaches that our statistics courses have taught us to distrust, like null hypothesis significance testing. So why would we want to use paramater estimation? The output of regression models is messy and more difficult to interpet. Can't we just stick with model comparison using Bayes Factors? 
+Assuming you are at least slightly familiar with Bayesian inference, you are probably familiar with Bayes Factors. Bayes Factors are an intuitive and easily interpretable alternative to approaches that our statistics courses have taught us to distrust, like null hypothesis significance testing. So why would we want to use parameter estimation? The output of regression models is messy and more difficult to interpet. Can't we just stick with model comparison using Bayes Factors? 
 
 In some cases, we can. However, we might run into some problems in other cases, such as when we want to use custom priors. Although the `BayesFactor` package allows for priors, you are pretty limited in what you can do with them. If you wanted to use priors resembling anything other than a Cauchy distribution, you're pretty well out of luck. Further, what if you wanted to apply different priors to different model terms? This is common, and it will not be easy - and in some cases, it will not be possible - using `BayesFactor`. 
 
