@@ -818,7 +818,7 @@ Output:
 1  -0.0765  -3.40   3.30   0.95 median hdi   
 ```
 
-Just as I suspected - no credible difference at higher doses. Thus, it seems that `supp` and `dose` interact such that tooth length is higher for the `OJ` group relative to the `VC` group and low and medium doses, but length is similar at high doses. If this study wasn't so mundane, maybe this would be a very interesting finding. 
+Just as I suspected - no credible difference at higher doses. Thus, it seems that `supp` and `dose` interact such that tooth length is higher for the `OJ` group relative to the `VC` group at low and medium doses, but length is similar at high doses. If this study wasn't so mundane, maybe this would be a very interesting finding. 
 
 The reason I've gone through all these arbitrary contrasts is to show you that you can really do whatever you please with the posterior when estimating parameters. This is a verstaile approach and I believe working with posteriors in this manner is about as intuitive as statistics can be, once you get past the more intimidating parts of the code. As a final exercise, let's put together some visualizations of our more complex model. One option would be to plot the estimates for each condition by group. This should do a fairly good job of conveying the pattern of results we observed. Here's how we could do it:
 
