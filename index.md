@@ -845,6 +845,8 @@ Which gives you this:
 
 ![complex-model-plot1](https://github.com/jed709/jed709.github.io/assets/87210399/f0aa1e76-195d-4f2a-aad8-b4e98f453e79)
 
+Note that I am getting into more advanced data wrangling and `ggplot2`-ing here. There are tutorials for `tidyverse` and `ggplot2` at the beginning of this post, if you're totally lost by what's going here. Unfortunately, I can't go over it all with you here! 
+
 Pretty cool, right? And it's informative, too! You can see the HDI, the full posterior, and the pattern of results is pretty easy to pick out. Of course, there are other ways we could visualize the data. For example, if we thought the `OJ` group would generally have much higher tooth length relative to the `VC` group, we might want to graphically highlight the contrast between levels of `supp` at different levels of `dose`. Hypothetical, of course, but here's how you could do that:
 
 ```R
