@@ -873,7 +873,7 @@ That will give you a plot like this:
 
 ![complex-model-con](https://github.com/jed709/jed709.github.io/assets/87210399/e36cfa10-9864-4a44-beab-0cc99a126764)
 
-Here, I added a line at 0 so it's easy to tell if a contrast is credible or not. If this was the comparison we were interest it, a plot like this would do a pretty good job communicating it. 
+Here, I added a line at 0 so it's easy to tell if a contrast is credible or not. If this was the comparison we were interested in, a plot like this would do a pretty good job communicating it. This plot also does a good job of showing off our interaction. 
 
 Now, as one FINAL exercise - for real, this time, I promise - let's demonstrate the importance of working with _principled_ priors. The priors we placed on our model were not particularly informative, and because of this, they did not have a drastic impact on our model output. However, what if we placed some stronger priors on the model? 
 
